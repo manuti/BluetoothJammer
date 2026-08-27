@@ -24,6 +24,7 @@ import androidx.core.content.ContextCompat
 import api.BluetoothDeviceInfo
 import api.DeviceSource
 import api.ScanNearbyDevices
+import api.SpeakerClassifier
 import com.google.android.material.materialswitch.MaterialSwitch
 
 class MainActivity : AppCompatActivity() {
@@ -65,12 +66,13 @@ class MainActivity : AppCompatActivity() {
         btnAttackSelected.setOnClickListener { launchSelectedAttack() }
         listView.setOnItemLongClickListener { _, _, position, _ ->
             val device = deviceListAdapter.getItem(position) ?: return@setOnItemLongClickListener false
+            val label = device.name ?: getString(R.string.unknown)
             if (selectedTargets.containsKey(device.address)) {
                 selectedTargets.remove(device.address)
-                Toast.makeText(this, getString(R.string.target_removed, device.name), Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.target_removed, label), Toast.LENGTH_SHORT).show()
             } else {
-                selectedTargets[device.address] = device.name
-                Toast.makeText(this, getString(R.string.target_added, device.name), Toast.LENGTH_SHORT).show()
+                selectedTargets[device.address] = label
+                Toast.makeText(this, getString(R.string.target_added, label), Toast.LENGTH_SHORT).show()
             }
             updateAttackButton()
             true
@@ -199,7 +201,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(
                     this,
-                    "Permisos necesarios para escanear dispositivos",
+                    getString(R.string.permission_required),
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -209,30 +211,31 @@ class MainActivity : AppCompatActivity() {
     // ---------- Device dialog (existing behavior) ----------
 
     private fun showDeviceInfo(device: BluetoothDeviceInfo) {
-        val speakerTag = if (device.isSpeaker) "\nTipo: ALTAPARLANTE" else ""
-        val vendorLine = device.vendor?.let { "\nFabricante: $it" } ?: ""
-        val servicesLine = device.serviceUuids?.take(4)?.joinToString(", ")?.let { "\nServicios: $it" } ?: ""
-        val message = "Name: ${device.name}\nAddress: ${device.address}$speakerTag$vendorLine$servicesLine"
+        val speakerTag = if (device.isSpeaker) "\n" + getString(R.string.device_info_speaker_type) else ""
+        val vendorLine = device.vendor?.let { "\n" + getString(R.string.device_info_vendor, it) } ?: ""
+        val servicesLine = device.serviceUuids?.take(4)?.joinToString(", ")?.let { "\n" + getString(R.string.device_info_services, it) } ?: ""
+        val message = getString(R.string.device_info_name, device.name ?: getString(R.string.unknown)) +
+            "\n" + getString(R.string.device_info_address, device.address) + speakerTag + vendorLine + servicesLine
 
         val dialogBuilder = AlertDialog.Builder(this)
-        dialogBuilder.setTitle("Device Info")
+        dialogBuilder.setTitle(R.string.device_info_title)
             .setMessage(message)
-            .setPositiveButton("Attack") { dialog, _ ->
+            .setPositiveButton(R.string.attack_btn) { dialog, _ ->
                 dialog.dismiss()
                 scanner.stopScanning()
                 val intent = Intent(this, AttackActivity::class.java).apply {
-                    putExtra("DEVICE_NAME", device.name)
+                    putExtra("DEVICE_NAME", device.name ?: getString(R.string.unknown))
                     putExtra("ADDRESS", device.address)
                     putExtra("THREADS", 8)
                 }
                 startActivity(intent)
             }
-            .setNegativeButton("Close") { dialog, _ -> dialog.dismiss() }
-            .setNeutralButton("Copy Info") { _, _ ->
+            .setNegativeButton(R.string.close) { dialog, _ -> dialog.dismiss() }
+            .setNeutralButton(R.string.copy_info) { _, _ ->
                 val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 val clip = android.content.ClipData.newPlainText("Device Info", message)
                 clipboard.setPrimaryClip(clip)
-                Toast.makeText(this, "Device info copied to clipboard", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.device_info_copied), Toast.LENGTH_SHORT).show()
             }
         dialogBuilder.create().show()
     }
@@ -268,21 +271,29 @@ class MainActivity : AppCompatActivity() {
 
             nameView.text = buildString {
                 if (info.isSpeaker) append("🔊 ")
-                append(info.name)
+                append(info.name ?: context.getString(R.string.unknown))
             }
 
             val pieces = mutableListOf<String>()
             when (info.source) {
-                DeviceSource.PAIRED -> pieces.add("Emparejado")
-                DeviceSource.CLASSIC -> pieces.add("Clásico")
-                DeviceSource.BLE -> pieces.add("BLE")
+                DeviceSource.PAIRED -> pieces.add(context.getString(R.string.paired))
+                DeviceSource.CLASSIC -> pieces.add(context.getString(R.string.classic))
+                DeviceSource.BLE -> pieces.add(context.getString(R.string.ble))
             }
-            info.deviceTypeLabel?.let { pieces.add(it) }
+            info.deviceTypeLabelRes?.let { pieces.add(context.getString(it)) }
             info.vendor?.let { pieces.add(it) }
-            info.serviceUuids?.take(3)?.let { pieces.add("Serv: ${it.joinToString(",")}") }
-            if (info.isSpeaker) info.speakerReason?.let { pieces.add("Altavoz ($it)") }
-            info.rssi?.let { pieces.add("RSSI $it") }
-            metaView.text = if (pieces.isEmpty()) "Sin datos" else pieces.joinToString(" · ")
+            info.serviceUuids?.take(3)?.let { pieces.add(context.getString(R.string.services_short, it.joinToString(","))) }
+            if (info.isSpeaker) info.speakerReason?.let { reason ->
+                val reasonText = when (reason) {
+                    SpeakerClassifier.Reason.DEVICE_CLASS -> context.getString(R.string.speaker_reason_class)
+                    SpeakerClassifier.Reason.BLE_APPEARANCE -> context.getString(R.string.speaker_reason_ble)
+                    SpeakerClassifier.Reason.NAME ->
+                        context.getString(R.string.speaker_reason_name, info.speakerKeyword ?: "")
+                }
+                pieces.add(context.getString(R.string.speaker_with_reason, reasonText))
+            }
+            info.rssi?.let { pieces.add(context.getString(R.string.rssi_label, it)) }
+            metaView.text = if (pieces.isEmpty()) context.getString(R.string.no_data) else pieces.joinToString(" · ")
 
             return view
         }

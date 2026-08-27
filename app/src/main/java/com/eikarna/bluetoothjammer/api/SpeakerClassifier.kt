@@ -1,5 +1,7 @@
 package api
 
+import com.eikarna.bluetoothjammer.R
+
 /**
  * Classifies whether a nearby Bluetooth device is likely an audio speaker.
  *
@@ -15,7 +17,15 @@ object SpeakerClassifier {
 
     enum class Confidence { HIGH, MEDIUM, LOW }
 
-    data class Result(val isSpeaker: Boolean, val confidence: Confidence, val reason: String?)
+    /** Machine-readable reason so the UI can localize the label. */
+    enum class Reason { DEVICE_CLASS, BLE_APPEARANCE, NAME }
+
+    data class Result(
+        val isSpeaker: Boolean,
+        val confidence: Confidence,
+        val reason: Reason?,
+        val matchedKeyword: String? = null
+    )
 
     // --- Classic device class (raw layout: bits 8-12 major, bits 2-7 minor) ---
     // BluetoothClass.Device.Major.AUDIO_VIDEO = 0x400; shifted value used by majorDeviceClass is 0x04
@@ -47,52 +57,52 @@ object SpeakerClassifier {
             if (major == MAJOR_AUDIO_VIDEO) {
                 when (minor) {
                     MINOR_LOUDSPEAKER, MINOR_HIFI, MINOR_DISPLAY_AND_SPEAKER ->
-                        return Result(true, Confidence.HIGH, "Clase BT")
+                        return Result(true, Confidence.HIGH, Reason.DEVICE_CLASS)
                     MINOR_PORTABLE_AUDIO, MINOR_CAR_AUDIO ->
-                        return Result(true, Confidence.MEDIUM, "Clase BT")
+                        return Result(true, Confidence.MEDIUM, Reason.DEVICE_CLASS)
                 }
             }
         }
 
         // 2. BLE appearance
         if (bleAppearance == APPEARANCE_GENERIC_SPEAKER) {
-            return Result(true, Confidence.HIGH, "BLE")
+            return Result(true, Confidence.HIGH, Reason.BLE_APPEARANCE)
         }
 
         // 3. Name heuristics
         val lower = name?.lowercase() ?: ""
         if (lower.isNotEmpty()) {
             val hit = SPEAKER_NAME_KEYWORDS.firstOrNull { lower.contains(it) }
-            if (hit != null) return Result(true, Confidence.MEDIUM, "Nombre: $hit")
+            if (hit != null) return Result(true, Confidence.MEDIUM, Reason.NAME, matchedKeyword = hit)
         }
 
         return Result(false, Confidence.LOW, null)
     }
 
     /**
-     * Human-readable label for a classic device class, or null when unknown.
+     * String resource id for a classic device class label, or null when unknown.
      */
-    fun describeDeviceClass(deviceClass: Int?): String? {
+    fun deviceTypeLabelRes(deviceClass: Int?): Int? {
         if (deviceClass == null) return null
         val major = (deviceClass shr 8) and 0x1F
         val minor = (deviceClass and 0xFF) shr 2
         return when (major) {
-            0x01 -> "Ordenador"
-            0x02 -> "Teléfono"
+            0x01 -> R.string.device_type_computer
+            0x02 -> R.string.device_type_phone
             0x04 -> when (minor) {
-                MINOR_LOUDSPEAKER -> "Altavoz"
-                MINOR_HIFI -> "Hi-Fi"
-                MINOR_DISPLAY_AND_SPEAKER -> "Pantalla con altavoz"
-                0x06 -> "Auriculares"            // AUDIO_VIDEO_HEADPHONES
-                0x01 -> "Auriculares con mic"    // AUDIO_VIDEO_WEARABLE_HEADSET
-                0x02 -> "Manos libres"           // AUDIO_VIDEO_HANDSFREE
-                MINOR_PORTABLE_AUDIO -> "Audio portátil"
-                MINOR_CAR_AUDIO -> "Audio de coche"
-                else -> "Audio/Video"
+                MINOR_LOUDSPEAKER -> R.string.device_type_speaker
+                MINOR_HIFI -> R.string.device_type_hifi
+                MINOR_DISPLAY_AND_SPEAKER -> R.string.device_type_display_speaker
+                0x06 -> R.string.device_type_headphones        // AUDIO_VIDEO_HEADPHONES
+                0x01 -> R.string.device_type_headset           // AUDIO_VIDEO_WEARABLE_HEADSET
+                0x02 -> R.string.device_type_handsfree         // AUDIO_VIDEO_HANDSFREE
+                MINOR_PORTABLE_AUDIO -> R.string.device_type_portable_audio
+                MINOR_CAR_AUDIO -> R.string.device_type_car_audio
+                else -> R.string.device_type_audio_video
             }
-            0x05 -> "Periférico"
-            0x07 -> "Wearable"
-            0x09 -> "Salud"
+            0x05 -> R.string.device_type_peripheral
+            0x07 -> R.string.device_type_wearable
+            0x09 -> R.string.device_type_health
             else -> null
         }
     }

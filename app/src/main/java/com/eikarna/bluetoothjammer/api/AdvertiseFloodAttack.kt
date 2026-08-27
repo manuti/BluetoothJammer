@@ -9,6 +9,7 @@ import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
 import android.os.ParcelUuid
 import androidx.core.content.ContextCompat.getSystemService
+import com.eikarna.bluetoothjammer.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,8 +25,11 @@ import java.util.UUID
  */
 class AdvertiseFloodAttack(private val targetAddress: String) : BluetoothAttack {
 
-    override val displayName = AttackType.ADVERTISE_FLOOD.displayName
-    override val description = AttackType.ADVERTISE_FLOOD.description
+    private var appContext: Context? = null
+    override val displayName: String
+        get() = appContext?.getString(AttackType.ADVERTISE_FLOOD.labelRes) ?: AttackType.ADVERTISE_FLOOD.fallbackLabel
+    override val description: String
+        get() = appContext?.getString(AttackType.ADVERTISE_FLOOD.descRes) ?: AttackType.ADVERTISE_FLOOD.fallbackDesc
 
     private var scope: CoroutineScope? = null
     private var advertiser: BluetoothLeAdvertiser? = null
@@ -39,19 +43,20 @@ class AdvertiseFloodAttack(private val targetAddress: String) : BluetoothAttack 
     override fun start(context: Context, onLog: (String) -> Unit) {
         if (running) return
         running = true
+        appContext = context.applicationContext
         val adapter = getSystemService(context, BluetoothManager::class.java)?.adapter
         if (adapter == null) {
             running = false
             return
         }
         if (!adapter.isMultipleAdvertisementSupported) {
-            onLog("[ADV] Este dispositivo no soporta advertising BLE")
+            onLog("[ADV] " + context.getString(R.string.log_adv_unsupported))
             running = false
             return
         }
         val leAdvertiser = adapter.bluetoothLeAdvertiser
         if (leAdvertiser == null) {
-            onLog("[ADV] No se pudo obtener BluetoothLeAdvertiser")
+            onLog("[ADV] " + context.getString(R.string.log_adv_no_advertiser))
             running = false
             return
         }
@@ -62,13 +67,13 @@ class AdvertiseFloodAttack(private val targetAddress: String) : BluetoothAttack 
             }
 
             override fun onStartFailure(errorCode: Int) {
-                onLog("[ADV] Fallo al anunciar (código $errorCode)")
+                onLog("[ADV] " + context.getString(R.string.log_adv_failure, errorCode))
             }
         }
 
         scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
         scope!!.launch {
-            onLog("[ADV] Flood iniciado (objetivo $targetAddress)")
+            onLog("[ADV] " + context.getString(R.string.log_adv_started, targetAddress))
             while (isActive && running) {
                 runCatching { leAdvertiser.stopAdvertising(advertiseCallback) }
                 val uuid = UUID.randomUUID()
@@ -82,11 +87,11 @@ class AdvertiseFloodAttack(private val targetAddress: String) : BluetoothAttack 
                     .setConnectable(false)
                     .build()
                 runCatching { leAdvertiser.startAdvertising(settings, data, advertiseCallback) }
-                onLog("[ADV] Anunciando UUID aleatorio $uuid")
+                onLog("[ADV] " + context.getString(R.string.log_adv_announcing, uuid))
                 delay(2000)
             }
             runCatching { leAdvertiser.stopAdvertising(advertiseCallback) }
-            onLog("[ADV] Flood detenido")
+            onLog("[ADV] " + context.getString(R.string.log_adv_stopped))
         }
     }
 

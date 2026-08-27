@@ -1,6 +1,6 @@
-# BluetoothJammer — Edición Mejorada (v1.4)
+# BluetoothJammer — Edición Mejorada (v1.5)
 
-Herramienta de **investigación educativa** sobre seguridad Bluetooth para Android (Kotlin / Material 3).
+Herramienta de **investigación educativa** sobre seguridad Bluetooth para Android (Kotlin / Material 3). **Bilingüe: español/inglés** — la app detecta el idioma del sistema y se configura sola (español → UI en español; cualquier otro idioma → UI en inglés).
 
 Versión mejorada del proyecto original [eikarna/BluetoothJammer](https://github.com/eikarna/BluetoothJammer), con detección real de dispositivos cercanos, clasificación de altavoces, múltiples técnicas de ataque seleccionables y motor de coroutines.
 
@@ -30,6 +30,12 @@ Este fork se publica bajo **licencia MIT** (ver [LICENSE](LICENSE)), pero con un
 **Responsabilidades legales:** este software se proporciona "TAL CUAL", sin garantías de ningún tipo. El autor de este fork **no se hace responsable** de ningún daño, pérdida o consecuencia legal derivada del uso indebido de esta herramienta. Es responsabilidad exclusiva del usuario final conocer y respetar la legislación local (FCC, normativa europea, etc.) y usar la aplicación únicamente con dispositivos de su propiedad y con fines educativos/privados.
 
 ---
+
+## Novedades de la versión 1.5
+
+- **App bilingüe español/inglés**: todos los textos de la UI (layouts, diálogos, toasts, spinners, log de ataque y etiquetas del clasificador) se mueven a recursos localizados. Android detecta el idioma del sistema automáticamente: **español → UI en español**, cualquier otro idioma → **UI en inglés**. No hay selector manual ni necesidad de reiniciar.
+- Los nombres de ataque, patrones de payload y etiquetas del clasificador pasan de literales en código a recursos de idioma (la lógica del motor no cambia).
+- Refactor de `SpeakerClassifier` y `BluetoothDeviceInfo`: las etiquetas visibles (tipo de dispositivo, motivo de clasificación como altavoz) ahora son resource IDs; los nombres de dispositivo desconocidos se resuelven en la UI ("Unknown"/"Desconocido").
 
 ## Novedades de la versión 1.4
 
@@ -128,20 +134,66 @@ Todos los ataques:
 ### 4. Seguridad y UX
 
 - **Diálogo de aviso educativo** obligatorio (no cancelable) al abrir la app.
+- **Bilingüe automático**: la UI sigue el idioma del sistema (español / inglés por defecto).
 - **Toast recordatorio** ("úsalo solo con dispositivos de tu propiedad") al iniciar cada ataque.
 - Log con marcas de tiempo (`Logger`) y límite de 100 líneas.
 
 ---
 
-## Lo que NO es posible sin root (documentado)
+## Efectos esperables: sin root vs. con root
 
-Limitaciones técnicas del SDK de Android (API pública) que esta app **no implementa ni puede implementar** sin root o hardware externo:
+> **Resumen honesto**: sin root, esta app es un **generador de sondas y carga de protocolo**, no un jammer. Produce tráfico Bluetooth real medible (conexiones, rechazos, consultas SDP) pero **no corta el audio A2DP de un altavoz ajeno** ni "tira" la conexión de otros dispositivos. Con root en el propio teléfono se desbloquean algunas capacidades reales de control del radio (ver abajo), pero **el jamming de RF sigue siendo imposible** sin hardware externo (SDR).
 
-- **Jamming de radiofrecuencia** (ruido en 2.4 GHz): requiere SDR (HackRF/ESP32); el módem del teléfono no expone RF arbitraria.
-- **Desautenticación (deauth) BR/EDR**: es un paquete de nivel de enlace (LMP_detach); la API pública no expone LMP y `createL2capSocket` está oculto/bloqueado por SELinux.
+### A. Sin root (app actual) — qué consigue de verdad
+
+| Ataque | Efecto observable real (sin root) |
+|---|---|
+| **L2CAP Flood** | Establece conexiones RFCOMM reales al objetivo y las satura con datos. Se observa en el log `[CONN]/[RETRY]`. El objetivo responde o rechaza — eso **es** una sonda de servicio. |
+| **RFCOMM Channel Flood** | Igual, barriendo canales 1-30; en Android 9+ la API oculta suele estar bloqueada y el propio log lo reporta y se detiene. |
+| **GATT Flood (BLE)** | Satura la tabla de conexiones GATT del **propio teléfono** (el límite está en el stack del atacante); puede degradar la capacidad BLE del propio dispositivo, no la del objetivo. |
+| **Pairing Flood** | Genera solicitudes de emparejamiento reales; el stack del objetivo decide. En Android moderno suele terminar en diálogo de confirmación en el objetivo (si el usuario acepta, crea bond). |
+| **SDP Query Storm** | Consultas SDP reales al servidor SDP del objetivo. Mide respuesta/denegación del servicio — sonda de servicios legítima. |
+| **Advertising Flood (BLE)** | Contamina el canal de anuncios BLE local con UUIDs aleatorios; observable con un escáner BLE cercano. No afecta enlaces existentes. |
+| **Profile Spoofing** | Prueba conexión presentando UUIDs de perfiles; los stacks modernos validan el protocolo, así que el efecto es saturación de intentos + sondeo de servicios. |
+| **Combo** | Suma de los anteriores en paralelo. |
+
+**Lo que NO consigue sin root**:
+
+- **Cortar/desconectar el audio A2DP de un altavoz**. El stream de audio va por un canal L2CAP paralelo dentro del enlace ACL; abrir conexiones RFCOMM no lo toca, y el stack no expone el comando HCI de desconexión de enlace (`LMP_detach`).
+- **Degradar la conexión entre otros dispositivos** (p. ej. el altavoz de un vecino con su teléfono): el salto de frecuencia + cifrado impiden siquiera monitorizarla; desconectarla requiere inyección de tramas LMP por el aire (hardware SDR).
+- **Jamming de radiofrecuencia**: el módem del teléfono no emite RF arbitraria.
+- **Auto-DoS** (único efecto audible posible): si el propio teléfono reproduce audio y ataca al mismo altavoz al que está conectado, la congestión del radio propio puede hacer tartamudear la reproducción propia. Es un efecto sobre uno mismo, no sobre el dispositivo ajeno.
+
+### B. Con root — qué se desbloquea (exploración, NO implementado)
+
+Si la app pidiera acceso root (`su`) en un móvil con esa posibilidad, se abren estas capacidades reales. **No están implementadas en esta versión**; se documentan como vía explorada para decisiones futuras.
+
+| Capacidad | Herramienta | Qué permite de verdad |
+|---|---|---|
+| **Desconexión de enlaces del propio teléfono** | `hcitool dc <MAC>` | Envía `HCI_Disconnect` (equivalente a `LMP_detach` a nivel de host) sobre un enlace ACL del **propio** adaptador. Si el altavoz está conectado al teléfono con root, **el audio A2DP se corta de verdad** — es el efecto que la versión sin root no puede lograr. Afecta solo a enlaces del propio host, no a enlaces ajenos. |
+| **Control fino del adaptador** | `hciconfig hci0 …` | Cambiar clase de dispositivo, pscan/inquiry, nombre, reset del radio. |
+| **Sondas de protocolo reales** | `hcidump` / `btmon` | Captura de paquetes HCI del propio radio: ver exactamente qué responde el objetivo en el aire (páginas, conecta/rechaza, errores de enlace). |
+| **Medición de calidad de enlace propio** | `hcitool rssi`, `hcitool lq` | RSSI y link quality de los enlaces del propio teléfono. |
+| **Desactivar/activar el radio** | `svc bluetooth disable/enable` | Apagar/encender el Bluetooth del propio teléfono (útil como "kill switch" del auto-DoS). |
+
+**Cómo se integraría** (si se implementa): detección de root (`which su`/`su -v`), ejecución vía `Runtime.exec("su -c …")` o `ProcessBuilder`, y los binarios `hcitool`/`hciconfig` provienen de `bluez-utils` (instalable vía módulo Magisk o busybox; no vienen en todos los ROMs).
+
+**Barreras prácticas del root en Android**:
+
+- **SELinux**: en ROMs stock con `enforcing` (casi todos), `su` no basta: el acceso de hcitool al HCI (`/dev/hci0` o socket de control) está denegado por política. Con Magisk se puede relajar (p. ej. `magiskpolicy --live 'allow bluetooth hci_file * *'`) o en ROMs custom/permissive funciona directo. Es frágil y varía por dispositivo/kernel/firmware del Bluetooth.
+- **No es un jammer con root**: el controlador sigue siendo un host Bluetooth normal; solo puede hablar protocolo, no emitir ruido arbitrario.
+
+### C. Lo que sigue siendo imposible incluso con root (sin hardware externo)
+
+- **Jamming RF real** ("pintar" la banda 2.4 GHz): requiere SDR — HackRF + PortaPack Mayhem ("Jammer TX") o ESP32 con firmware dedicado. El controlador Bluetooth del teléfono no puede emitir RF fuera del protocolo.
+- **Desautenticar/desconectar enlaces entre OTROS dispositivos**: `hcitool dc` solo actúa sobre enlaces del propio host; desconectar un enlace ajeno exige inyectar tramas LMP por el aire (mitM RF) o un exploit de stack — ambos fuera del alcance de una app educativa.
+- **Suplantación de MAC**: la dirección la fija el controlador (puede ser aleatoria, no elegible).
+- **Exploits de CVEs (BlueFrag, etc.)**: requieren tramas HCI/L2CAP crudas malformadas (el firmware no las emite) y targets con stacks antiguos sin parchear; los RCE quedan fuera del marco educativo.
+
+### D. Limitaciones del SDK sin root (referencia)
+
+- **Desautenticación (deauth) BR/EDR**: `LMP_detach` no está expuesto; `createL2capSocket` es API oculta bloqueada por SELinux/hidden-API enforcement en Android 9+.
 - **L2CAP a PSMs arbitrarios / UUIDs malformados**: `createInsecureRfcommSocketToServiceRecord(UUID)` valida el UUID; solo RFCOMM (PSM 0x03) es público y no se pueden enviar tramas malformadas.
-- **Exploits de CVEs (BlueFrag CVE-2020-0022, CVE-2024-43763, MediaTek, etc.)**: requieren tramas L2CAP/HCI crudas (no emitibles por la API pública) y targets con stacks antiguos sin parchear; los RCE no son material de prueba de estrés educativa y quedan fuera del alcance.
-- **Suplantación de MAC** en advertising BLE: el controlador fija la dirección (puede ser aleatoria, pero no elegible).
 - **Variación de firma de paquetes a nivel de stack**: los headers los controla el stack; solo se varía payload/UUID y temporización (jitter).
 
 ---
@@ -184,7 +236,7 @@ android.aapt2FromMavenOverride=/data/data/com.termux/files/usr/bin/aapt2
 
 ## Instalación
 
-1. Compila o descarga el APK debug (`app/build/outputs/apk/debug/app-debug.apk`).
+1. Descarga el APK del **release v1.5** ([BluetoothJammer Improved v1.5](https://github.com/manuti/BluetoothJammer/releases/tag/v1.5)) o compílalo tú (`app/build/outputs/apk/debug/app-debug.apk`).
 2. Copia el APK a tu dispositivo (p. ej. `~/storage/downloads/` en Termux).
 3. Ábrelo con el gestor de archivos y permite "instalar aplicaciones desconocidas".
 4. Al abrir la app: acepta el aviso educativo y concede los permisos de Bluetooth/ubicación cuando se soliciten.
@@ -225,7 +277,7 @@ app/src/main/java/com/eikarna/bluetoothjammer/
 - **Fabricante (OUI)** usa una tabla parcial; con direcciones MAC aleatorias (comunes en BLE) el resultado puede ser nulo o incorrecto.
 - **Advertising Flood** requiere que el hardware soporte advertising BLE (`isMultipleAdvertisementSupported`) y falla si el radio está ocupado.
 - **Profile Spoofing** no es una suplantación real: los stacks modernos validan el protocolo de cada perfil; el efecto es saturación de canales y sondeo de servicios.
-- **No es un jammer de RF** y no puede emitir tramas crudas (ver sección "Lo que NO es posible sin root").
+- **No es un jammer de RF** y no puede emitir tramas crudas (ver sección "Efectos esperables: sin root vs. con root").
 - La detección y la efectividad dependen del hardware del teléfono (antena, alcance).
 
 ---

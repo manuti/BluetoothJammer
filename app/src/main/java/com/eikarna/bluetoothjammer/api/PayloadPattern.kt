@@ -1,5 +1,7 @@
 package api
 
+import android.content.Context
+import com.eikarna.bluetoothjammer.R
 import kotlin.random.Random
 
 /**
@@ -8,11 +10,11 @@ import kotlin.random.Random
  * At protocol level the exact shape rarely matters for the effect, but it is
  * useful to study and keeps the tool flexible.
  */
-enum class PayloadPattern(val displayName: String) {
-    RANDOM("Ruido aleatorio"),
-    FIXED("Patrón fijo (A-Z)"),
-    SAWTOOTH("Sierra (0-255)"),
-    CHIRP("Ondulado (chirp)");
+enum class PayloadPattern(val displayNameRes: Int, val fallbackName: String) {
+    RANDOM(R.string.pattern_random, "Random noise"),
+    FIXED(R.string.pattern_fixed, "Fixed pattern (A-Z)"),
+    SAWTOOTH(R.string.pattern_sawtooth, "Sawtooth (0-255)"),
+    CHIRP(R.string.pattern_chirp, "Wavy (chirp)");
 
     /** Builds a [size]-byte payload buffer with this pattern. */
     fun buffer(size: Int): ByteArray = when (this) {

@@ -1,6 +1,7 @@
 package api
 
 import android.content.Context
+import com.eikarna.bluetoothjammer.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -34,13 +35,13 @@ class DutyCycleAttack(
         running = true
         scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
         scope!!.launch {
-            onLog("[DUTY] Ciclo TX ${txSeconds}s / Sleep ${sleepSeconds}s (con jitter)")
+            onLog("[DUTY] " + context.getString(R.string.log_duty_cycle, txSeconds, sleepSeconds))
             while (isActive && running) {
                 inner.start(context, onLog)
-                onLog("[DUTY] TX activo (${txSeconds}s)")
+                onLog("[DUTY] " + context.getString(R.string.log_duty_tx, txSeconds))
                 jitterDelay(txSeconds * 1000, jitterMs = (txSeconds * 1000) / 2)
                 inner.stop()
-                onLog("[DUTY] Pausa (${sleepSeconds}s)")
+                onLog("[DUTY] " + context.getString(R.string.log_duty_sleep, sleepSeconds))
                 jitterDelay(sleepSeconds * 1000, jitterMs = (sleepSeconds * 1000) / 2)
             }
         }

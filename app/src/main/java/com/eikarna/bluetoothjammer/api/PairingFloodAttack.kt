@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import androidx.core.content.ContextCompat.getSystemService
+import com.eikarna.bluetoothjammer.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -22,8 +23,11 @@ class PairingFloodAttack(
     private val rateDelayMs: Int = 0
 ) : BluetoothAttack {
 
-    override val displayName = AttackType.PAIRING_FLOOD.displayName
-    override val description = AttackType.PAIRING_FLOOD.description
+    private var appContext: Context? = null
+    override val displayName: String
+        get() = appContext?.getString(AttackType.PAIRING_FLOOD.labelRes) ?: AttackType.PAIRING_FLOOD.fallbackLabel
+    override val description: String
+        get() = appContext?.getString(AttackType.PAIRING_FLOOD.descRes) ?: AttackType.PAIRING_FLOOD.fallbackDesc
 
     private var scope: CoroutineScope? = null
     @Volatile
@@ -35,6 +39,7 @@ class PairingFloodAttack(
     override fun start(context: Context, onLog: (String) -> Unit) {
         if (running) return
         running = true
+        appContext = context.applicationContext
         val adapter = getSystemService(context, BluetoothManager::class.java)?.adapter
         if (adapter == null) {
             running = false
@@ -50,7 +55,7 @@ class PairingFloodAttack(
         // The stack serializes bond requests; more than 3 workers adds nothing.
         val concurrency = threads.coerceIn(1, 3)
         scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-        onLog("[PAIR] Pairing Flood iniciado (objetivo $targetAddress, $concurrency worker(s))")
+        onLog("[PAIR] " + context.getString(R.string.log_pairing_started, targetAddress, concurrency))
         for (worker in 0 until concurrency) {
             scope!!.launch {
                 var attempts = 0
@@ -61,9 +66,9 @@ class PairingFloodAttack(
                     } catch (e: SecurityException) {
                         false
                     }
-                    if (ok) onLog("[PAIR] Solicitud de emparejamiento enviada (worker $worker)")
+                    if (ok) onLog("[PAIR] " + context.getString(R.string.log_pairing_sent, worker))
                     attempts++
-                    if (attempts % 10 == 0) onLog("[PAIR] Intentos totales: $attempts")
+                    if (attempts % 10 == 0) onLog("[PAIR] " + context.getString(R.string.log_pairing_total, attempts))
                     round++
                     jitterDelay(maxOf(1200, rateDelayMs))
                 }

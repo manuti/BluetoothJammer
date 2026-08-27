@@ -1,6 +1,8 @@
 package api
 
 import android.bluetooth.BluetoothSocket
+import android.content.Context
+import com.eikarna.bluetoothjammer.R
 import java.io.IOException
 
 /**
@@ -11,6 +13,7 @@ import java.io.IOException
 internal object FloodSupport {
 
     suspend fun flood(
+        context: Context,
         socket: BluetoothSocket,
         payloadPattern: PayloadPattern,
         payloadSize: Int,
@@ -28,7 +31,7 @@ internal object FloodSupport {
                 socket.outputStream.write(buffer)
                 blocks++
                 jitterDelay(rateDelayMs)
-                if (blocks % 200 == 0) onLog("[$tag][DATA] Enviados $blocks bloques ($dataSize B)")
+                if (blocks % 200 == 0) onLog("[$tag][DATA] " + context.getString(R.string.log_blocks_sent, blocks, dataSize))
             }
         } catch (e: IOException) {
             // connection dropped by the remote side — expected under flood

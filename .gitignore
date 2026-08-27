@@ -16,6 +16,7 @@ local.properties
 
 # Session artifact — never publish
 chat_export_*.md
+CONTEXT.md
 
 # Agent internal state — never publish
 .codewhale/

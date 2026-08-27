@@ -24,7 +24,7 @@
         <com.google.android.material.textview.MaterialTextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Threads: "
+            android:text="@string/threads_label"
             android:textSize="12sp"/>
 
         <com.google.android.material.textfield.TextInputEditText
@@ -33,7 +33,7 @@
             android:layout_height="wrap_content"
             android:autofillHints="8"
             android:inputType="numberDecimal"
-            android:hint="eg. 8 Threads (Coroutines)"
+            android:hint="@string/threads_hint"
             android:imeOptions="actionNext"
             android:textSize="12sp"
             android:cursorVisible="false" />
@@ -47,7 +47,7 @@
         <com.google.android.material.textview.MaterialTextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Delay (ms): "
+            android:text="@string/delay_label"
             android:textSize="12sp"/>
 
         <com.google.android.material.textfield.TextInputEditText
@@ -56,7 +56,7 @@
             android:layout_height="wrap_content"
             android:autofillHints="0"
             android:inputType="number"
-            android:hint="0 = máximo, ej. 200"
+            android:hint="@string/delay_hint"
             android:imeOptions="actionNext"
             android:textSize="12sp"
             android:cursorVisible="false" />
@@ -70,7 +70,7 @@
         <com.google.android.material.textview.MaterialTextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="TX (s): "
+            android:text="@string/tx_label"
             android:textSize="12sp"/>
 
         <com.google.android.material.textfield.TextInputEditText
@@ -79,7 +79,7 @@
             android:layout_height="wrap_content"
             android:autofillHints="10"
             android:inputType="number"
-            android:hint="10 (0 = sin ciclo)"
+            android:hint="@string/tx_hint"
             android:imeOptions="actionNext"
             android:textSize="12sp"
             android:cursorVisible="false" />
@@ -93,7 +93,7 @@
         <com.google.android.material.textview.MaterialTextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Sleep (s): "
+            android:text="@string/sleep_label"
             android:textSize="12sp"/>
 
         <com.google.android.material.textfield.TextInputEditText
@@ -102,7 +102,7 @@
             android:layout_height="wrap_content"
             android:autofillHints="5"
             android:inputType="number"
-            android:hint="5 (0 = continuo)"
+            android:hint="@string/sleep_hint"
             android:imeOptions="actionNext"
             android:textSize="12sp"
             android:cursorVisible="false" />
@@ -116,7 +116,7 @@
         <com.google.android.material.textview.MaterialTextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Payload (B): "
+            android:text="@string/payload_label"
             android:textSize="12sp"/>
 
         <com.google.android.material.textfield.TextInputEditText
@@ -125,7 +125,7 @@
             android:layout_height="wrap_content"
             android:autofillHints="0"
             android:inputType="number"
-            android:hint="0 = auto, ej. 990"
+            android:hint="@string/payload_hint"
             android:imeOptions="actionNext"
             android:textSize="12sp"
             android:cursorVisible="false" />
@@ -140,7 +140,7 @@
             android:id="@+id/switchBombard"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Bombardeo (conectar/enviar/cerrar)"
+            android:text="@string/bombard_label"
             android:textSize="12sp" />
     </LinearLayout>
 
@@ -151,7 +151,7 @@
         <com.google.android.material.textview.MaterialTextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Patrón: "
+            android:text="@string/pattern_label"
             android:textSize="12sp"/>
 
         <Spinner
@@ -169,7 +169,7 @@
         <com.google.android.material.textview.MaterialTextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Tipo de ataque:"
+            android:text="@string/attack_type_label"
             android:textSize="12sp" />
 
         <Spinner
@@ -186,7 +186,7 @@
         android:id="@+id/buttonStartStop"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Start"
+        android:text="@string/start_btn"
         android:layout_weight="1"/>
 
         <com.google.android.material.materialswitch.MaterialSwitch
@@ -195,7 +195,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:checked="true"
-            android:text="Log"
+            android:text="@string/log_label"
             android:textSize="12sp"
             android:textAlignment="textEnd" />
 

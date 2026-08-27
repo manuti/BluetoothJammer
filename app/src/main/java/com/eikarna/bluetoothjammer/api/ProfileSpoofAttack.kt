@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothSocket
 import android.content.Context
 import androidx.core.content.ContextCompat.getSystemService
+import com.eikarna.bluetoothjammer.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -30,8 +31,11 @@ class ProfileSpoofAttack(
     private val rateDelayMs: Int = 0
 ) : BluetoothAttack {
 
-    override val displayName = AttackType.PROFILE_SPOOF.displayName
-    override val description = AttackType.PROFILE_SPOOF.description
+    private var appContext: Context? = null
+    override val displayName: String
+        get() = appContext?.getString(AttackType.PROFILE_SPOOF.labelRes) ?: AttackType.PROFILE_SPOOF.fallbackLabel
+    override val description: String
+        get() = appContext?.getString(AttackType.PROFILE_SPOOF.descRes) ?: AttackType.PROFILE_SPOOF.fallbackDesc
 
     private val sockets = Collections.synchronizedList(mutableListOf<BluetoothSocket>())
     private var scope: CoroutineScope? = null
@@ -56,6 +60,7 @@ class ProfileSpoofAttack(
     override fun start(context: Context, onLog: (String) -> Unit) {
         if (running) return
         running = true
+        appContext = context.applicationContext
         val adapter = getSystemService(context, BluetoothManager::class.java)?.adapter
         if (adapter == null) {
             running = false
@@ -70,8 +75,8 @@ class ProfileSpoofAttack(
 
         val workers = threads.coerceIn(1, profileUuids.size)
         scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-        onLog("[SPOOF] Spoofing iniciado (objetivo $targetAddress, $workers worker(s))")
-        onLog("[SPOOF] Perfiles probados: ${profileUuids.joinToString(", ") { it.first }}")
+        onLog("[SPOOF] " + context.getString(R.string.log_spoof_started, targetAddress, workers))
+        onLog("[SPOOF] " + context.getString(R.string.log_spoof_profiles, profileUuids.joinToString(", ") { it.first }))
 
         repeat(workers) { worker ->
             scope!!.launch {
@@ -84,11 +89,11 @@ class ProfileSpoofAttack(
                         socket.connect()
                         if (socket.isConnected) {
                             sockets.add(socket)
-                            onLog("[$worker][SPOOF] ✓ Conectado presentándose como $name ($uuid)")
+                            onLog("[$worker][SPOOF] " + context.getString(R.string.log_spoof_connected, name, uuid))
                         }
                     } catch (err: IOException) {
                         runCatching { socket?.close() }
-                        onLog("[$worker][SPOOF] ✗ $name rechazado")
+                        onLog("[$worker][SPOOF] " + context.getString(R.string.log_spoof_rejected, name))
                     }
                     probe++
                     jitterDelay(rateDelayMs)

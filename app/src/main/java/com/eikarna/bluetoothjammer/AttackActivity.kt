@@ -40,8 +40,8 @@ class AttackActivity : AppCompatActivity() {
     private lateinit var logAttack: MaterialTextView
     private lateinit var switchLog: MaterialSwitch
 
-    private var deviceName: String = "Unknown Device"
-    private var address: String = "Unknown Address"
+    private var deviceName: String = ""
+    private var address: String = ""
     private val targets: MutableList<Pair<String, String>> = mutableListOf()
     private var threads: Int = 8
     private var delayMs: Int = 0
@@ -57,7 +57,7 @@ class AttackActivity : AppCompatActivity() {
     private var retryEvents = 0
 
     companion object {
-        var FrameworkVersion = 1.4
+        var FrameworkVersion = 1.5
         var loggingStatus = true
     }
 
@@ -75,11 +75,11 @@ class AttackActivity : AppCompatActivity() {
             }
         }
         if (targets.isEmpty()) {
-            deviceName = intent.getStringExtra("DEVICE_NAME") ?: "Unknown Device"
-            address = intent.getStringExtra("ADDRESS") ?: "Unknown Address"
+            deviceName = intent.getStringExtra("DEVICE_NAME") ?: getString(R.string.unknown_device)
+            address = intent.getStringExtra("ADDRESS") ?: getString(R.string.unknown_address)
             targets.add(deviceName to address)
         } else {
-            deviceName = if (targets.size == 1) targets[0].first else "${targets.size} objetivos"
+            deviceName = if (targets.size == 1) targets[0].first else getString(R.string.targets_count, targets.size)
             address = targets.joinToString(", ") { it.second }
         }
         threads = intent.getIntExtra("THREADS", 8)
@@ -100,17 +100,17 @@ class AttackActivity : AppCompatActivity() {
         switchLog = findViewById(R.id.switchLogView)
 
         // Set text views
-        viewDeviceName.text = "Device Name: $deviceName"
-        viewDeviceAddress.text = "Address: $address"
+        viewDeviceName.text = getString(R.string.device_name_label, deviceName)
+        viewDeviceAddress.text = getString(R.string.address_label, address)
         viewThreads.setText("$threads")
         logAttack.justificationMode = LineBreaker.JUSTIFICATION_MODE_INTER_WORD
-        Logger.appendLog(logAttack, "Bluetooth Jammer Framework Version: $FrameworkVersion")
+        Logger.appendLog(logAttack, getString(R.string.framework_version, FrameworkVersion.toString()))
 
         // Payload pattern selector
         val patternAdapter = ArrayAdapter(
             this,
             android.R.layout.simple_spinner_dropdown_item,
-            PayloadPattern.values().map { it.displayName }
+            PayloadPattern.values().map { getString(it.displayNameRes) }
         )
         spinnerPayloadPattern.adapter = patternAdapter
 
@@ -119,14 +119,14 @@ class AttackActivity : AppCompatActivity() {
         val typeAdapter = ArrayAdapter(
             this,
             android.R.layout.simple_spinner_dropdown_item,
-            attackTypes.map { it.displayName }
+            attackTypes.map { it.displayName(this) }
         )
         spinnerAttackType.adapter = typeAdapter
         spinnerAttackType.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
                 val type = attackTypes[position]
                 if (!AttackManager.isAttacking) {
-                    logAttack.append("\n> ${type.displayName}: ${type.description}")
+                    logAttack.append("\n> ${type.displayName(this@AttackActivity)}: ${type.description(this@AttackActivity)}")
                 }
             }
 
@@ -176,7 +176,7 @@ class AttackActivity : AppCompatActivity() {
         switchBombard.setOnCheckedChangeListener { _, checked ->
             bombard = checked
             if (checked) {
-                logAttack.append("\n> Modo bombardeo: ciclos rápidos conectar/enviar/cerrar")
+                logAttack.append("\n" + getString(R.string.bombard_mode_log))
             }
         }
 
@@ -185,7 +185,7 @@ class AttackActivity : AppCompatActivity() {
             loggingStatus = isChecked
             Toast.makeText(
                 this@AttackActivity,
-                if (isChecked) "Logging habilitado" else "Logging deshabilitado",
+                getString(if (isChecked) R.string.logging_enabled else R.string.logging_disabled),
                 Toast.LENGTH_LONG
             ).show()
         }
@@ -194,7 +194,7 @@ class AttackActivity : AppCompatActivity() {
     @SuppressLint("MissingPermission")
     private fun startAttack() {
         if (AttackManager.isAttacking) return
-        buttonStartStop.text = "Stop"
+        buttonStartStop.text = getString(R.string.stop_btn)
         BluetoothAdapter.getDefaultAdapter().cancelDiscovery()
 
         val selectedType = AttackType.values()[spinnerAttackType.selectedItemPosition]
@@ -233,26 +233,35 @@ class AttackActivity : AppCompatActivity() {
         }
         Logger.appendLog(
             logAttack,
-            "Ataque iniciado: ${selectedType.displayName} sobre ${targets.size} objetivo(s) | " +
-                "Intensidad: $threads | Delay: ${delayMs}ms | TX: ${txSeconds}s | Sleep: ${sleepSeconds}s | " +
-                "Patrón: ${params.payloadPattern.displayName} | Payload: ${payloadSize}B | Bombardeo: $bombard"
+            getString(
+                R.string.attack_started_log,
+                selectedType.displayName(this),
+                targets.size,
+                threads,
+                delayMs,
+                txSeconds,
+                sleepSeconds,
+                getString(params.payloadPattern.displayNameRes),
+                payloadSize,
+                bombard
+            )
         )
         Toast.makeText(
             this,
-            "Usa esto SOLO con dispositivos de tu propiedad. Stop para detener.",
+            getString(R.string.attack_warning_toast),
             Toast.LENGTH_LONG
         ).show()
     }
 
     @SuppressLint("MissingPermission")
     private fun stopAttack() {
-        buttonStartStop.text = "Start"
+        buttonStartStop.text = getString(R.string.start_btn)
         val elapsed = (System.currentTimeMillis() - startTimeMs) / 1000
         Logger.appendLog(
             logAttack,
-            "[RESUMEN] ${elapsed}s · CONN $connEvents · DATA $dataEvents · RETRY $retryEvents · objetivos ${targets.size}"
+            getString(R.string.summary_log, elapsed, connEvents, dataEvents, retryEvents, targets.size)
         )
-        Logger.appendLog(logAttack, "Ataque detenido (${AttackManager.activeTargets().size} objetivo(s) activo(s)).")
+        Logger.appendLog(logAttack, getString(R.string.attack_stopped_log, AttackManager.activeTargets().size))
         AttackManager.stopAll()
         startedAttacks.clear()
         BluetoothAdapter.getDefaultAdapter().startDiscovery()
