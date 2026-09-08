@@ -118,6 +118,66 @@
     <string name="device_type_wearable">Wearable</string>
     <string name="device_type_health">Health</string>
 
+    <!-- Developer options & root (v1.6) -->
+    <string name="dev_chip_default">Dev</string>
+    <string name="dev_chip_status">Dev: %1$s</string>
+    <string name="dev_state_on">ON</string>
+    <string name="dev_state_off">OFF</string>
+    <string name="dev_state_unknown">?</string>
+    <string name="root_chip_default">Root</string>
+    <string name="root_chip_status">Root: %1$s</string>
+    <string name="root_state_none">—</string>
+    <string name="root_state_avail">disp</string>
+    <string name="root_state_granted">OK</string>
+    <string name="dev_dialog_title">Developer options (Bluetooth)</string>
+    <string name="dev_line_mode">Developer options: %1$s</string>
+    <string name="dev_line_snoop">Bluetooth HCI snoop log: %1$s</string>
+    <string name="dev_hint_off">To enable them: open Settings > Developer options. If the entry is hidden, tap "Build number" 7 times (Settings > About phone). The app cannot enable developer mode by itself.</string>
+    <string name="dev_hint_on">Useful here:
+• Bluetooth HCI snoop log: records raw HCI traffic to a file (real protocol probes, like hcidump). Toggle Bluetooth off/on after enabling.
+• Disable Bluetooth A2DP hardware offload: can stabilize audio tests on this device.</string>
+    <string name="dev_open_settings">Open developer settings</string>
+    <string name="dev_snoop_on_root">Enable HCI snoop (root)</string>
+    <string name="dev_snoop_off_root">Disable HCI snoop (root)</string>
+    <string name="root_note_snoop">Note: toggle Bluetooth OFF/ON (or reboot) for the snoop log to start writing.</string>
+    <string name="root_tools_title">Root tools</string>
+    <string name="root_tools_found">Bluetooth tools found: %1$s</string>
+    <string name="root_tools_none">none (hcitool/hciconfig missing — install bluez-utils, e.g. via a Magisk module)</string>
+    <string name="root_tool_hci">Radio &amp; controller (hcitool dev / hciconfig)</string>
+    <string name="root_tool_con">Own ACL links (hcitool con)</string>
+    <string name="root_tool_snoop_on">Enable HCI snoop log</string>
+    <string name="root_tool_snoop_off">Disable HCI snoop log</string>
+    <string name="root_tool_bt_off">Turn Bluetooth OFF (kill switch)</string>
+    <string name="root_tool_bt_on">Turn Bluetooth ON</string>
+    <string name="root_confirm_bt_off_title">Turn Bluetooth OFF?</string>
+    <string name="root_confirm_bt_off_message">Runs: svc bluetooth disable
+
+Turns off the Bluetooth radio of this device (kill switch). Re-enable it with the other option or from system settings.</string>
+    <string name="cmd_output_title">Output</string>
+    <string name="cmd_no_output">(no output)</string>
+    <string name="cmd_exit">exit: %1$d</string>
+    <string name="root_no_su_title">Root not available</string>
+    <string name="root_no_su_message">No su binary was found on this device. Root tools need a rooted ROM (e.g. Magisk). Without root the SDK limits described in the README still apply.</string>
+    <string name="root_requesting">Requesting root access…</string>
+    <string name="root_yes">Root access granted.</string>
+    <string name="root_denied_title">Root denied</string>
+    <string name="root_denied_message">Root access was not granted.
+
+Output: %1$s</string>
+
+    <!-- Root tools on the attack screen (v1.6) -->
+    <string name="btn_root_tools">Root tools (target)</string>
+    <string name="atk_root_no_mac">No usable target MAC address.</string>
+    <string name="atk_tool_link">Link quality (RSSI / LQ) per target</string>
+    <string name="atk_tool_con">Own ACL links (hcitool con)</string>
+    <string name="atk_tool_dc">Disconnect own link (hcitool dc)</string>
+    <string name="atk_tool_dev">Radio devices (hcitool dev)</string>
+    <string name="atk_dc_confirm_title">Disconnect own link?</string>
+    <string name="atk_dc_confirm_message">Runs: hcitool dc &lt;MAC&gt;
+
+Disconnects only the ACL link of THIS phone to the target. If you stream audio (A2DP) from this phone to the target, playback stops here. Links between other devices are never affected.</string>
+    <string name="atk_confirm_dc">Disconnect</string>
+
     <!-- Engine logs (attack screen) -->
     <string name="log_l2cap_started">L2CAP Flood started (target %1$s, %2$d worker(s))</string>
     <string name="log_bombard_burst">Burst sent (bombard mode)</string>

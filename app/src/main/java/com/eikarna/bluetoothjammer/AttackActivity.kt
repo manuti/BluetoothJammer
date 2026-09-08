@@ -10,9 +10,11 @@ import android.widget.ArrayAdapter
 import android.widget.Spinner
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.text.isDigitsOnly
 import androidx.core.widget.doAfterTextChanged
+import androidx.lifecycle.lifecycleScope
 import api.AttackManager
 import api.AttackParams
 import api.AttackType
@@ -22,7 +24,11 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textview.MaterialTextView
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import util.Logger
+import util.RootManager
 
 class AttackActivity : AppCompatActivity() {
 
@@ -37,6 +43,7 @@ class AttackActivity : AppCompatActivity() {
     private lateinit var switchBombard: MaterialSwitch
     private lateinit var spinnerAttackType: Spinner
     private lateinit var buttonStartStop: MaterialButton
+    private lateinit var buttonRootTools: MaterialButton
     private lateinit var logAttack: MaterialTextView
     private lateinit var switchLog: MaterialSwitch
 
@@ -57,7 +64,7 @@ class AttackActivity : AppCompatActivity() {
     private var retryEvents = 0
 
     companion object {
-        var FrameworkVersion = 1.5
+        var FrameworkVersion = 1.6
         var loggingStatus = true
     }
 
@@ -96,6 +103,7 @@ class AttackActivity : AppCompatActivity() {
         switchBombard = findViewById(R.id.switchBombard)
         spinnerAttackType = findViewById(R.id.spinnerAttackType)
         buttonStartStop = findViewById(R.id.buttonStartStop)
+        buttonRootTools = findViewById(R.id.btnRootTools)
         logAttack = findViewById(R.id.logTextView)
         switchLog = findViewById(R.id.switchLogView)
 
@@ -189,6 +197,9 @@ class AttackActivity : AppCompatActivity() {
                 Toast.LENGTH_LONG
             ).show()
         }
+
+        // Root tools (v1.6): actions that need su (hcitool on own links)
+        buttonRootTools.setOnClickListener { onRootToolsClick() }
     }
 
     @SuppressLint("MissingPermission")
@@ -265,6 +276,106 @@ class AttackActivity : AppCompatActivity() {
         AttackManager.stopAll()
         startedAttacks.clear()
         BluetoothAdapter.getDefaultAdapter().startDiscovery()
+    }
+
+    // ---------- Root tools for the selected target (v1.6) ----------
+
+    private fun targetMacs(): List<String> =
+        targets.map { it.second }.distinct()
+            .filter { it.isNotBlank() && it != getString(R.string.unknown_address) }
+
+    private fun onRootToolsClick() {
+        if (RootManager.granted) {
+            showRootTargetTools()
+            return
+        }
+        lifecycleScope.launch {
+            val hasSu = withContext(Dispatchers.IO) { RootManager.suPath() != null }
+            if (!hasSu) {
+                AlertDialog.Builder(this@AttackActivity)
+                    .setTitle(R.string.root_no_su_title)
+                    .setMessage(R.string.root_no_su_message)
+                    .setPositiveButton(R.string.close, null)
+                    .show()
+                return@launch
+            }
+            Toast.makeText(this@AttackActivity, getString(R.string.root_requesting), Toast.LENGTH_LONG).show()
+            val result = withContext(Dispatchers.IO) { RootManager.requestRoot() }
+            if (RootManager.granted) {
+                Toast.makeText(this@AttackActivity, getString(R.string.root_yes), Toast.LENGTH_SHORT).show()
+                showRootTargetTools()
+            } else {
+                AlertDialog.Builder(this@AttackActivity)
+                    .setTitle(R.string.root_denied_title)
+                    .setMessage(getString(R.string.root_denied_message, result.text.take(1200).ifBlank { "-" }))
+                    .setPositiveButton(R.string.close, null)
+                    .show()
+            }
+        }
+    }
+
+    private fun showRootTargetTools() {
+        val macs = targetMacs()
+        if (macs.isEmpty()) {
+            Toast.makeText(this, getString(R.string.atk_root_no_mac), Toast.LENGTH_LONG).show()
+            return
+        }
+        lifecycleScope.launch {
+            val tools = withContext(Dispatchers.IO) { RootManager.bluetoothToolsInstalled() }
+            val toolsLine = getString(
+                R.string.root_tools_found,
+                if (tools.isEmpty()) getString(R.string.root_tools_none) else tools.joinToString(", ")
+            )
+            val labels = arrayOf(
+                getString(R.string.atk_tool_link),
+                getString(R.string.atk_tool_con),
+                getString(R.string.atk_tool_dc),
+                getString(R.string.atk_tool_dev)
+            )
+            AlertDialog.Builder(this@AttackActivity)
+                .setTitle(R.string.btn_root_tools)
+                .setMessage(toolsLine)
+                .setItems(labels) { _, which ->
+                    when (which) {
+                        0 -> runRootTargetCommand(
+                            labels[0],
+                            macs.joinToString("; ") { "echo '== $it'; hcitool rssi $it; hcitool lq $it" }
+                        )
+                        1 -> runRootTargetCommand(labels[1], "hcitool con")
+                        2 -> AlertDialog.Builder(this@AttackActivity)
+                            .setTitle(R.string.atk_dc_confirm_title)
+                            .setMessage(getString(R.string.atk_dc_confirm_message, macs.joinToString(", ")))
+                            .setPositiveButton(R.string.atk_confirm_dc) { _, _ ->
+                                runRootTargetCommand(labels[2], macs.joinToString("; ") { "hcitool dc $it" })
+                            }
+                            .setNegativeButton(R.string.close, null)
+                            .show()
+                        3 -> runRootTargetCommand(labels[3], "hcitool dev")
+                    }
+                }
+                .setNegativeButton(R.string.close, null)
+                .show()
+        }
+    }
+
+    private fun runRootTargetCommand(title: String, command: String) {
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) { RootManager.suExec(command) }
+            val body = buildString {
+                append(result.output.ifBlank { getString(R.string.cmd_no_output) })
+                append("\n\n")
+                append(getString(R.string.cmd_exit, result.exitCode))
+                if (result.error.isNotBlank()) {
+                    append("\n")
+                    append(result.error)
+                }
+            }
+            AlertDialog.Builder(this@AttackActivity)
+                .setTitle(title)
+                .setMessage(body.take(4000))
+                .setPositiveButton(R.string.close, null)
+                .show()
+        }
     }
 
     override fun onDestroy() {

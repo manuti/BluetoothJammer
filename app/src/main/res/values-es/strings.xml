@@ -118,6 +118,66 @@
     <string name="device_type_wearable">Wearable</string>
     <string name="device_type_health">Salud</string>
 
+    <!-- Developer options & root (v1.6) -->
+    <string name="dev_chip_default">Dev</string>
+    <string name="dev_chip_status">Dev: %1$s</string>
+    <string name="dev_state_on">SÍ</string>
+    <string name="dev_state_off">NO</string>
+    <string name="dev_state_unknown">?</string>
+    <string name="root_chip_default">Root</string>
+    <string name="root_chip_status">Root: %1$s</string>
+    <string name="root_state_none">—</string>
+    <string name="root_state_avail">disp</string>
+    <string name="root_state_granted">OK</string>
+    <string name="dev_dialog_title">Opciones de desarrollador (Bluetooth)</string>
+    <string name="dev_line_mode">Opciones de desarrollador: %1$s</string>
+    <string name="dev_line_snoop">Registro Bluetooth HCI snoop: %1$s</string>
+    <string name="dev_hint_off">Para activarlas: Ajustes > Opciones de desarrollador. Si el menú está oculto, pulsa 7 veces sobre "Número de compilación" (Ajustes > Información del teléfono). La app no puede activar el modo desarrollador por sí sola.</string>
+    <string name="dev_hint_on">Útiles aquí:
+• Registro Bluetooth HCI snoop: graba el tráfico HCI crudo a un archivo (sondas de protocolo reales, como hcidump). Activa/desactiva Bluetooth tras habilitarlo.
+• Deshabilitar descarga de audio A2DP por hardware: puede estabilizar las pruebas de audio en este dispositivo.</string>
+    <string name="dev_open_settings">Abrir opciones de desarrollador</string>
+    <string name="dev_snoop_on_root">Activar snoop HCI (root)</string>
+    <string name="dev_snoop_off_root">Desactivar snoop HCI (root)</string>
+    <string name="root_note_snoop">Nota: apaga/enciende Bluetooth (o reinicia) para que el snoop log empiece a escribir.</string>
+    <string name="root_tools_title">Herramientas root</string>
+    <string name="root_tools_found">Herramientas Bluetooth encontradas: %1$s</string>
+    <string name="root_tools_none">ninguna (faltan hcitool/hciconfig — instala bluez-utils, p. ej. con un módulo Magisk)</string>
+    <string name="root_tool_hci">Radio y controlador (hcitool dev / hciconfig)</string>
+    <string name="root_tool_con">Enlaces ACL propios (hcitool con)</string>
+    <string name="root_tool_snoop_on">Activar registro HCI snoop</string>
+    <string name="root_tool_snoop_off">Desactivar registro HCI snoop</string>
+    <string name="root_tool_bt_off">Apagar Bluetooth (kill switch)</string>
+    <string name="root_tool_bt_on">Encender Bluetooth</string>
+    <string name="root_confirm_bt_off_title">¿Apagar Bluetooth?</string>
+    <string name="root_confirm_bt_off_message">Ejecuta: svc bluetooth disable
+
+Apaga el radio Bluetooth de este dispositivo (kill switch). Puedes volver a encenderlo con la otra opción o desde los ajustes del sistema.</string>
+    <string name="cmd_output_title">Salida</string>
+    <string name="cmd_no_output">(sin salida)</string>
+    <string name="cmd_exit">salida: %1$d</string>
+    <string name="root_no_su_title">Root no disponible</string>
+    <string name="root_no_su_message">No se encontró el binario su en este dispositivo. Las herramientas root requieren una ROM rooteada (p. ej. Magisk). Sin root siguen aplicando los límites del SDK descritos en el README.</string>
+    <string name="root_requesting">Solicitando acceso root…</string>
+    <string name="root_yes">Acceso root concedido.</string>
+    <string name="root_denied_title">Root denegado</string>
+    <string name="root_denied_message">No se concedió acceso root.
+
+Salida: %1$s</string>
+
+    <!-- Root tools en pantalla de ataque (v1.6) -->
+    <string name="btn_root_tools">Herramientas root (objetivo)</string>
+    <string name="atk_root_no_mac">No hay una dirección MAC de objetivo válida.</string>
+    <string name="atk_tool_link">Calidad de enlace (RSSI / LQ) por objetivo</string>
+    <string name="atk_tool_con">Enlaces ACL propios (hcitool con)</string>
+    <string name="atk_tool_dc">Desconectar enlace propio (hcitool dc)</string>
+    <string name="atk_tool_dev">Dispositivos de radio (hcitool dev)</string>
+    <string name="atk_dc_confirm_title">¿Desconectar enlace propio?</string>
+    <string name="atk_dc_confirm_message">Ejecuta: hcitool dc sobre: %1$s
+
+Desconecta SOLO el enlace ACL de este teléfono con el objetivo. Si estás reproduciendo audio (A2DP) desde este teléfono hacia el objetivo, la reproducción se cortará aquí. Los enlaces entre otros dispositivos nunca se ven afectados.</string>
+    <string name="atk_confirm_dc">Desconectar</string>
+
     <!-- Engine logs (attack screen) -->
     <string name="log_l2cap_started">L2CAP Flood iniciado (objetivo %1$s, %2$d worker(s))</string>
     <string name="log_bombard_burst">Ráfaga enviada (bombardeo)</string>

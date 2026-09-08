@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -21,23 +22,32 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import api.BluetoothDeviceInfo
 import api.DeviceSource
 import api.ScanNearbyDevices
 import api.SpeakerClassifier
 import com.google.android.material.materialswitch.MaterialSwitch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import util.DevOptions
+import util.RootManager
+import util.SuResult
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var listView: ListView
     private lateinit var deviceListAdapter: DeviceAdapter
     private lateinit var btnScan: Button
+    private lateinit var btnAttackSelected: Button
+    private lateinit var btnDevOptions: Button
+    private lateinit var btnRoot: Button
     private lateinit var switchSpeakersOnly: MaterialSwitch
     private lateinit var txtStatus: TextView
     private val scanner = ScanNearbyDevices.getInstance()
     private var onlySpeakers = false
     private var currentDevices: List<BluetoothDeviceInfo> = emptyList()
-    private lateinit var btnAttackSelected: Button
     private val selectedTargets = LinkedHashMap<String, String>()
 
     companion object {
@@ -51,8 +61,13 @@ class MainActivity : AppCompatActivity() {
         listView = findViewById(R.id.deviceListView)
         btnScan = findViewById(R.id.btnScan)
         btnAttackSelected = findViewById(R.id.btnAttackSelected)
+        btnDevOptions = findViewById(R.id.btnDevOptions)
+        btnRoot = findViewById(R.id.btnRootStatus)
         switchSpeakersOnly = findViewById(R.id.switchSpeakersOnly)
         txtStatus = findViewById(R.id.txtStatus)
+
+        btnDevOptions.setOnClickListener { showDevOptionsDialog() }
+        btnRoot.setOnClickListener { onRootButtonClick() }
 
         deviceListAdapter = DeviceAdapter(this, mutableListOf())
         listView.adapter = deviceListAdapter
@@ -84,6 +99,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         checkBluetoothStatusAndPermissions()
+        updateDevChip()
+        updateRootChip()
     }
 
     // ---------- Educational warning ----------
@@ -245,6 +262,8 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         if (permissionsGranted()) startScan()
+        updateDevChip()
+        updateRootChip()
     }
 
     override fun onPause() {
@@ -255,6 +274,175 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         scanner.stopScanning()
+    }
+
+    // ---------- Developer options & root (v1.6) ----------
+
+    private fun updateDevChip() {
+        btnDevOptions.text = getString(
+            R.string.dev_chip_status,
+            getString(
+                when (DevOptions.developerOptionsEnabled(this)) {
+                    true -> R.string.dev_state_on
+                    false -> R.string.dev_state_off
+                    null -> R.string.dev_state_unknown
+                }
+            )
+        )
+    }
+
+    private fun updateRootChip() {
+        if (RootManager.granted) {
+            btnRoot.text = getString(R.string.root_chip_status, getString(R.string.root_state_granted))
+            return
+        }
+        lifecycleScope.launch {
+            val available = withContext(Dispatchers.IO) { RootManager.suPath() != null }
+            btnRoot.text = getString(
+                R.string.root_chip_status,
+                getString(if (available) R.string.root_state_avail else R.string.root_state_none)
+            )
+        }
+    }
+
+    private fun onRootButtonClick() {
+        if (RootManager.granted) {
+            showRootToolsDialog()
+            return
+        }
+        lifecycleScope.launch {
+            val hasSu = withContext(Dispatchers.IO) { RootManager.suPath() != null }
+            if (!hasSu) {
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle(R.string.root_no_su_title)
+                    .setMessage(R.string.root_no_su_message)
+                    .setPositiveButton(R.string.close, null)
+                    .show()
+                return@launch
+            }
+            Toast.makeText(this@MainActivity, getString(R.string.root_requesting), Toast.LENGTH_LONG).show()
+            val result = withContext(Dispatchers.IO) { RootManager.requestRoot() }
+            updateRootChip()
+            if (RootManager.granted) {
+                Toast.makeText(this@MainActivity, getString(R.string.root_yes), Toast.LENGTH_SHORT).show()
+                showRootToolsDialog()
+            } else {
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle(R.string.root_denied_title)
+                    .setMessage(getString(R.string.root_denied_message, result.text.take(1200).ifBlank { "-" }))
+                    .setPositiveButton(R.string.close, null)
+                    .show()
+            }
+        }
+    }
+
+    private fun showRootToolsDialog() {
+        lifecycleScope.launch {
+            val tools = withContext(Dispatchers.IO) { RootManager.bluetoothToolsInstalled() }
+            val toolsLine = getString(
+                R.string.root_tools_found,
+                if (tools.isEmpty()) getString(R.string.root_tools_none) else tools.joinToString(", ")
+            )
+            val labels = arrayOf(
+                getString(R.string.root_tool_hci),
+                getString(R.string.root_tool_con),
+                getString(R.string.root_tool_snoop_on),
+                getString(R.string.root_tool_snoop_off),
+                getString(R.string.root_tool_bt_off),
+                getString(R.string.root_tool_bt_on)
+            )
+            AlertDialog.Builder(this@MainActivity)
+                .setTitle(R.string.root_tools_title)
+                .setMessage(toolsLine)
+                .setItems(labels) { _, which ->
+                    when (which) {
+                        0 -> runRootCommand(labels[0], "hcitool dev; echo '---'; hciconfig hci0 2>&1 || true")
+                        1 -> runRootCommand(labels[1], "hcitool con")
+                        2 -> runRootCommand(labels[2], "settings put global bluetooth_hci_log 1", getString(R.string.root_note_snoop))
+                        3 -> runRootCommand(labels[3], "settings put global bluetooth_hci_log 0", getString(R.string.root_note_snoop))
+                        4 -> AlertDialog.Builder(this@MainActivity)
+                            .setTitle(R.string.root_confirm_bt_off_title)
+                            .setMessage(R.string.root_confirm_bt_off_message)
+                            .setPositiveButton(R.string.root_tool_bt_off) { _, _ ->
+                                runRootCommand(labels[4], "svc bluetooth disable")
+                            }
+                            .setNegativeButton(R.string.close, null)
+                            .show()
+                        5 -> runRootCommand(labels[5], "svc bluetooth enable")
+                    }
+                }
+                .setNegativeButton(R.string.close, null)
+                .show()
+        }
+    }
+
+    private fun runRootCommand(title: String, command: String, note: String? = null) {
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) { RootManager.suExec(command) }
+            showCommandOutput(title, command, result, note)
+        }
+    }
+
+    private fun showCommandOutput(title: String, command: String, result: SuResult, note: String?) {
+        val body = buildString {
+            append(result.output.ifBlank { getString(R.string.cmd_no_output) })
+            append("\n\n")
+            append(getString(R.string.cmd_exit, result.exitCode))
+            if (result.error.isNotBlank()) {
+                append("\n")
+                append(result.error)
+            }
+            if (note != null) {
+                append("\n\n")
+                append(note)
+            }
+        }
+        AlertDialog.Builder(this)
+            .setTitle(title)
+            .setMessage(body.take(4000))
+            .setPositiveButton(R.string.close, null)
+            .show()
+    }
+
+    private fun showDevOptionsDialog() {
+        val dev = DevOptions.developerOptionsEnabled(this)
+        val snoop = DevOptions.hciSnoopEnabled(this)
+        val devLabel = when (dev) {
+            true -> getString(R.string.dev_state_on)
+            false -> getString(R.string.dev_state_off)
+            null -> getString(R.string.dev_state_unknown)
+        }
+        val snoopLabel = when (snoop) {
+            true -> getString(R.string.dev_state_on)
+            false -> getString(R.string.dev_state_off)
+            null -> getString(R.string.dev_state_unknown)
+        }
+        val body = getString(R.string.dev_line_mode, devLabel) + "\n" +
+            getString(R.string.dev_line_snoop, snoopLabel) + "\n\n" +
+            (if (dev == true) getString(R.string.dev_hint_on) else getString(R.string.dev_hint_off))
+
+        val builder = AlertDialog.Builder(this)
+            .setTitle(R.string.dev_dialog_title)
+            .setMessage(body)
+            .setPositiveButton(R.string.dev_open_settings) { _, _ ->
+                try {
+                    startActivity(Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS))
+                } catch (e: Exception) {
+                    Toast.makeText(this, getString(R.string.dev_state_unknown), Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton(R.string.close, null)
+
+        if (RootManager.granted && snoop != true) {
+            builder.setNeutralButton(R.string.dev_snoop_on_root) { _, _ ->
+                runRootCommand(getString(R.string.dev_snoop_on_root), "settings put global bluetooth_hci_log 1", getString(R.string.root_note_snoop))
+            }
+        } else if (RootManager.granted && snoop == true) {
+            builder.setNeutralButton(R.string.dev_snoop_off_root) { _, _ ->
+                runRootCommand(getString(R.string.dev_snoop_off_root), "settings put global bluetooth_hci_log 0", getString(R.string.root_note_snoop))
+            }
+        }
+        builder.show()
     }
 
     // ---------- Adapter ----------
