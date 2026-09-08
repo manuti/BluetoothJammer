@@ -1,4 +1,4 @@
-# BluetoothJammer — Edición Mejorada (v1.5)
+# BluetoothJammer — Edición Mejorada (v1.6)
 
 Herramienta de **investigación educativa** sobre seguridad Bluetooth para Android (Kotlin / Material 3). **Bilingüe: español/inglés** — la app detecta el idioma del sistema y se configura sola (español → UI en español; cualquier otro idioma → UI en inglés).
 
@@ -30,6 +30,17 @@ Este fork se publica bajo **licencia MIT** (ver [LICENSE](LICENSE)), pero con un
 **Responsabilidades legales:** este software se proporciona "TAL CUAL", sin garantías de ningún tipo. El autor de este fork **no se hace responsable** de ningún daño, pérdida o consecuencia legal derivada del uso indebido de esta herramienta. Es responsabilidad exclusiva del usuario final conocer y respetar la legislación local (FCC, normativa europea, etc.) y usar la aplicación únicamente con dispositivos de su propiedad y con fines educativos/privados.
 
 ---
+
+## Novedades de la versión 1.6
+
+- **Detección de modo desarrollador y estado HCI snoop** (pantalla principal): chip `Dev` que lee `Settings.Secure.DEVELOPMENT_SETTINGS_ENABLED` y la clave `bluetooth_hci_log` (`Settings.Global`/`Secure`). La app **no puede activar** el modo desarrollador por sí sola — informa, guía y abre los ajustes de desarrollador (`Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS`). Con root sí puede activar/desactivar el snoop log (`settings put global bluetooth_hci_log 1|0`).
+- **Solicitud de root desde la app** (chip `Root`): detecta `su` **sin disparar el prompt** del gestor de root (`suPath()`, solo localiza el binario), y al pulsarlo ejecuta `su -c id` (`requestRoot()`), que es lo que muestra el diálogo Magisk/Superuser. Estado visible: `—` (sin su) / `disp` (su presente, sin conceder) / `OK` (concedido).
+- **Herramientas root** (pantalla principal, con root concedido): `hcitool dev` + `hciconfig`, `hcitool con` (enlaces propios), HCI snoop ON/OFF, y kill switch `svc bluetooth disable/enable` (con confirmación). Cada acción muestra la **salida cruda del comando** + exit code — las denegaciones SELinux se ven tal cual, sin fingir éxito.
+- **Root tools por objetivo** (pantalla de ataque): acciones `hcitool` sobre la MAC del/los objetivo(s): `rssi`, `lq`, `con`, `dev` y **`hcitool dc`** (con confirmación explícita: solo corta enlaces ACL del propio teléfono — si se emite A2DP desde el propio teléfono hacia el objetivo, se corta de verdad).
+- **Detección de binarios bluez**: `bluetoothToolsInstalled()` avisa si `hcitool`/`hciconfig`/`hcidump`/`btmon` no están disponibles en la ROM (no vienen en todas).
+- Nuevos `util/RootManager.kt` (suPath/requestRoot/suExec/SuResult) y `util/DevOptions.kt` (lecturas de Settings). `FrameworkVersion = 1.6`, versionCode 7.
+
+**Límites que se respetan** (ver sección "Efectos esperables"): sin root la app no puede activar opciones de desarrollador (solo informar + deep-link); con root, SELinux `enforcing` en ROMs stock puede denegar el acceso HCI aunque haya `su` (la UI muestra la salida real); `hcitool dc`/`rssi`/`lq` solo afectan enlaces del **propio** adaptador.
 
 ## Novedades de la versión 1.5
 
@@ -164,9 +175,9 @@ Todos los ataques:
 - **Jamming de radiofrecuencia**: el módem del teléfono no emite RF arbitraria.
 - **Auto-DoS** (único efecto audible posible): si el propio teléfono reproduce audio y ataca al mismo altavoz al que está conectado, la congestión del radio propio puede hacer tartamudear la reproducción propia. Es un efecto sobre uno mismo, no sobre el dispositivo ajeno.
 
-### B. Con root — qué se desbloquea (exploración, NO implementado)
+### B. Con root — qué se desbloquea (implementación parcial en v1.6)
 
-Si la app pidiera acceso root (`su`) en un móvil con esa posibilidad, se abren estas capacidades reales. **No están implementadas en esta versión**; se documentan como vía explorada para decisiones futuras.
+La v1.6 ya implementa un primer conjunto de estas capacidades (detección de `su`, `requestRoot()` y herramientas por objetivo — ver **Novedades v1.6**); la tabla describe qué permite cada una y qué queda como vía explorada.
 
 | Capacidad | Herramienta | Qué permite de verdad |
 |---|---|---|
@@ -176,7 +187,7 @@ Si la app pidiera acceso root (`su`) en un móvil con esa posibilidad, se abren 
 | **Medición de calidad de enlace propio** | `hcitool rssi`, `hcitool lq` | RSSI y link quality de los enlaces del propio teléfono. |
 | **Desactivar/activar el radio** | `svc bluetooth disable/enable` | Apagar/encender el Bluetooth del propio teléfono (útil como "kill switch" del auto-DoS). |
 
-**Cómo se integraría** (si se implementa): detección de root (`which su`/`su -v`), ejecución vía `Runtime.exec("su -c …")` o `ProcessBuilder`, y los binarios `hcitool`/`hciconfig` provienen de `bluez-utils` (instalable vía módulo Magisk o busybox; no vienen en todos los ROMs).
+**Cómo está integrado** (v1.6): `util/RootManager.kt` — `suPath()` localiza `su` (PATH + rutas típicas) sin disparar el prompt; `requestRoot(timeoutMs)` ejecuta `su -c id` (esto muestra el diálogo Magisk/Superuser); `suExec(command)` ejecuta `su -c <comando>`; `bluetoothToolsInstalled()` lista los binarios bluez alcanzables. Ejecución vía `ProcessBuilder` desde `Dispatchers.IO`. Los binarios `hcitool`/`hciconfig` provienen de `bluez-utils` (instalable vía módulo Magisk o busybox; no vienen en todos los ROMs).
 
 **Barreras prácticas del root en Android**:
 
@@ -236,7 +247,7 @@ android.aapt2FromMavenOverride=/data/data/com.termux/files/usr/bin/aapt2
 
 ## Instalación
 
-1. Descarga el APK del **release v1.5** ([BluetoothJammer Improved v1.5](https://github.com/manuti/BluetoothJammer/releases/tag/v1.5)) o compílalo tú (`app/build/outputs/apk/debug/app-debug.apk`).
+1. Descarga el APK del **release más reciente** ([releases de BluetoothJammer Improved](https://github.com/manuti/BluetoothJammer/releases)) o compílalo tú (`app/build/outputs/apk/debug/app-debug.apk`).
 2. Copia el APK a tu dispositivo (p. ej. `~/storage/downloads/` en Termux).
 3. Ábrelo con el gestor de archivos y permite "instalar aplicaciones desconocidas".
 4. Al abrir la app: acepta el aviso educativo y concede los permisos de Bluetooth/ubicación cuando se soliciten.
