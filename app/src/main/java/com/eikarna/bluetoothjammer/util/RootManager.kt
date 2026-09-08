@@ -51,7 +51,7 @@ object RootManager {
     @Synchronized
     fun suPath(): String? {
         cachedSuPath?.let { return it }
-        val lookup = exec(arrayOf("sh", "-c", "command -v su 2>/dev/null || true"))
+        val lookup = exec(arrayOf("sh", "-c", "command -v su 2>/dev/null || true"), 10_000)
         val found = lookup.output.lineSequence()
             .map { it.trim() }
             .firstOrNull { it.startsWith("/") }
