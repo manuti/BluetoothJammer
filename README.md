@@ -269,6 +269,8 @@ android.aapt2FromMavenOverride=/data/data/com.termux/files/usr/bin/aapt2
 
 3. The `gradlew` shebang (`#!/usr/bin/env sh`) does not resolve in Termux; run it with `sh gradlew`.
 
+> Full step-by-step setup (Termux from F-Droid, toolchain packages, JDK, Android SDK, `gh`) is in **[docs/TERMUX-SETUP.md](docs/TERMUX-SETUP.md)**.
+
 ---
 
 ## Installation
